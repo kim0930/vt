@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>📌 프로젝트 목록</h2>
+<a href="{% url 'project-create' %}" class="btn btn-primary">+ 새 프로젝트 추가</a>
+<ul>
+    {% for project in projects %}
+        <li>
+            <a href="{% url 'project-update' project.id %}" class="btn btn-warning">수정</a>
+            <a href="{% url 'project-detail' project.id %}">{{ project.title }}</a> - {{ project.description }}
+            <a href="{% url 'project-delete' project.id %}" class="btn btn-danger">삭제</a>
+        </li>
+    {% empty %}
+        <p>아직 생성된 프로젝트가 없습니다.</p>
+    {% endfor %}
+</ul>
+{% endblock %}

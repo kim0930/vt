@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block sidebar %}
+    {{ block.super }}  <!-- 기존 base.html의 sidebar 내용 유지 -->
+
+    <h2>{{ project.title }}</h2>
+    <p>{{ project.description }}</p>
+    <p>생성 날짜: {{ project.created_at }}</p>
+    <p>마지막 수정: {{ project.updated_at }}</p>
+
+    <a href="{% url 'project-list' %}" class="btn btn-secondary">목록으로</a>
+    <a href="{% url 'project-update' project.id %}" class="btn btn-warning">수정</a>
+    <a href="{% url 'project-delete' project.id %}" class="btn btn-danger">삭제</a>
+{% endblock %}
+
+{% block content %}
+    <!-- 메인 콘텐츠: 기본적으로 버츄어투어 앱 로드 -->
+    <div id="main-content">
+        <iframe id="app-frame" width="100%" height="600px" frameborder="0"></iframe>
+    </div>
+
+    <div class="bottom-icons">
+        <button >🏠 버츄어투어</button>
+        <button >🏗 3D 모델</button>
+        <button >🖼 이미지 리스트</button>
+    </div>
+{% endblock %}
+
+
+<!-- 메인 콘텐츠: 기본적으로 버츄어투어 앱 로드 
+<div id="main-content">
+    <iframe id="app-frame" src="{% url 'virtual_tour' %}" width="100%" height="600px" frameborder="0"></iframe>
+</div>
+
+<div class="bottom-icons">
+    <button onclick="loadApp('virtual_tour')">🏠 버츄어투어</button>
+    <button onclick="loadApp('3d_model')">🏗 3D 모델</button>
+    <button onclick="loadApp('image_list')">🖼 이미지 리스트</button>
+</div>
+
+<script>
+    function loadProjectDetail(projectId) {
+        fetch(`/projects/${projectId}/detail/`)
+        .then(response => response.text())
+        .then(html => {
+            document.getElementById('project-detail').innerHTML = html;
+        })
+        .catch(error => console.error('Error:', error));
+    }
+
+    function loadApp(appType) {
+        let url;
+        if (appType === 'virtual_tour') {
+            url = "{% url 'virtual_tour' %}";
+        } else if (appType === '3d_model') {
+            url = "{% url '3d_model' %}";
+        } else if (appType === 'image_list') {
+            url = "{% url 'image_list' %}";
+        }
+        document.getElementById('app-frame').src = url;
+    }
+</script>
+ -->

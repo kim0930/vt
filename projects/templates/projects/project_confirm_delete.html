@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>🗑 프로젝트 삭제</h2>
+<p>정말로 "{{ project.title }}" 프로젝트를 삭제하시겠습니까?</p>
+
+<form method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">삭제</button>
+    <a href="{% url 'project-list' %}" class="btn btn-secondary">취소</a>
+</form>
+{% endblock %}
