@@ -16,15 +16,54 @@
 {% block content %}
     <!-- 메인 콘텐츠: 기본적으로 버츄어투어 앱 로드 -->
     <div id="main-content">
-        <iframe id="app-frame" width="100%" height="600px" frameborder="0"></iframe>
+        <iframe id="app-frame" src="{% url 'virtual_tour:virtual_tour' project.id %}" width="100%" height="600px" frameborder="0"></iframe>
+    </div>
+    
+    <div class="bottom-icons">
+        <button onclick="loadApp('virtual_tour')">🏠 버츄어투어</button>
+        <button onclick="loadApp('3d_model')">🏗 3D 모델</button>
+        <button onclick="loadApp('image_list')">🖼 이미지 리스트</button>
     </div>
 
-    <div class="bottom-icons">
-        <button >🏠 버츄어투어</button>
-        <button >🏗 3D 모델</button>
-        <button >🖼 이미지 리스트</button>
-    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            fetch("{% url 'virtual_tour:get_panoramas_by_date' project.id %}")
+            .then(response => response.json())
+            .then(data => {
+                let selector = document.getElementById("panorama-selector");
+                selector.innerHTML = "<h3>날짜별 파노라마</h3>";
+                
+                Object.keys(data.panoramas_by_date).forEach(date => {
+                    let button = document.createElement("button");
+                    button.textContent = date;
+                    button.onclick = function() {
+                        loadPanorama(data.panoramas_by_date[date][0].id);
+                    };
+                    selector.appendChild(button);
+                });
+            })
+            .catch(error => console.error("Error loading panoramas:", error));
+        });
+        
+        function loadPanorama(panoramaId) {
+            document.getElementById("app-frame").src = '/virtual_tour/view/${panoramaId}/';}
+        
+        function loadApp(appType) {
+            let url;
+            if (appType === "virtual_tour") {
+                url = "{% url 'virtual_tour:virtual_tour' project.id %}";
+            } else if (appType === "3d_model") {
+                url = "{% url 'virtual_tour:virtual_tour' project.id %}";
+            } else if (appType === "image_list") {
+                url = "{% url 'virtual_tour:virtual_tour' project.id %}";
+            }
+            document.getElementById("app-frame").src = url;
+        }
+        </script>
 {% endblock %}
+
+
 
 
 <!-- 메인 콘텐츠: 기본적으로 버츄어투어 앱 로드 

@@ -12,5 +12,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path("users/", include("users.urls")),  # 로그인/로그아웃 URL 포함
     path("projects/", include("projects.urls")),  # 👈 프로젝트 API 추가
+    path("virtual_tour/", include("virtual_tour.urls")),  # 👈 프로젝트 API 추가
 
 ]

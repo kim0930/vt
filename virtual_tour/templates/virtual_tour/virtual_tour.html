@@ -1,0 +1,10 @@
+{% load static %}  
+
+<button id="virtual-tour-button" data-project-id="{{ project.id }}">파노라마 시작</button>
+
+<div id="virtual-tour-container" style="display: none;">
+    <div id="panorama-list"></div>
+    <div id="panorama-viewer"></div>
+</div>
+
+<script src="{% static 'virtual_tour/js/virtual_tour.js' %}"></script>

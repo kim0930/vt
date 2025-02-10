@@ -46,7 +46,7 @@ INSTALLED_APPS = [
     # Custom apps
     'users',
     'projects',  # 👈 프로젝트 앱 
-
+    'virtual_tour',  # 👈 프로젝트 앱 
 ]
 
 MIDDLEWARE = [
@@ -157,3 +157,5 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = "kimth0930@gmail.com"  # 본인의 이메일
 EMAIL_HOST_PASSWORD = "459665Kth!"  # 앱 비밀번호 사용
 DEFAULT_FROM_EMAIL = "noreply@example.com"
+
+X_FRAME_OPTIONS = 'SAMEORIGIN'
