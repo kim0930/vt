@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>📂 프로젝트 파일 업로드</h2>
+
+<!-- ✅ 업로드 폴더 테이블 -->
+<h3>📁 업로드된 폴더 목록</h3>
+
+{% if date_folders %}
+<form id="delete-form">
+    <table border="1">
+        <thead>
+            <tr>
+                <th></th>
+                {% for date in date_folders %}
+                <th><input type="checkbox" class="column-checkbox" value="{{ date }}"></th>
+                {% endfor %}
+            </tr>
+
+            <tr>
+                <th>층</th>
+                {% for date in date_folders %}
+                <th>{{ date }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for floor in floor_folders  %}
+            <tr>
+                <td>{{ floor }}</td>
+                {% for date, folders in folder_structure.items %}
+                <td>
+                    {% if floor in folders %}
+                        ✅
+                    {% else %}
+                        ❌
+                    {% endif %}
+                </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <button type="button" id="delete-selected">선택한 폴더 삭제</button>
+</form>
+{% else %}
+업로드된 폴더 없음
+{% endif %}
+
+<h2>ZIP 파일 업로드</h2>
+
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-primary">업로드</button>
+</form>
+
+<a href="{% url 'project-list' %}" class="btn btn-secondary">돌아가기</a>
+
+<script>
+document.getElementById("delete-selected").addEventListener("click", function() {
+    let selectedFolders = [];
+    document.querySelectorAll(".column-checkbox:checked").forEach(checkbox => {
+        selectedFolders.push(checkbox.value);
+    });
+
+    if (selectedFolders.length === 0) {
+        alert("삭제할 폴더를 선택하세요.");
+        return;
+    }
+
+    fetch("{% url 'delete-selected-folders' project.id %}", {
+        method: "POST",
+        headers: {
+            "X-CSRFToken": "{{ csrf_token }}",
+            "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: new URLSearchParams({ "folders[]": selectedFolders })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.deleted) {
+            alert("삭제 완료: " + data.deleted.join(", "));
+            location.reload();
+        }
+    })
+    .catch(error => console.error("Error:", error));
+});
+</script>
+    
+{% endblock %}

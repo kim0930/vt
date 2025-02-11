@@ -1,3 +1,5 @@
+import uuid
+
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
 
@@ -28,6 +30,7 @@ class User(AbstractUser):
     username = None  # username 필드 제거
     email = models.EmailField(unique=True)
     phone_number = models.CharField(max_length=15, unique=True)
+    uuid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['phone_number']

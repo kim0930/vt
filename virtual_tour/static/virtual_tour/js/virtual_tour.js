@@ -4,7 +4,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const panoramaListContainer = document.getElementById("panorama-list");
 
     virtualTourButton.addEventListener("click", function () {
-        const projectId = this.dataset.projectId; // 프로젝트 ID 가져오기
+        const projectId = this.dataset.projectId; 
         fetch('/virtual_tour/panoramas/${projectId}/')
             .then(response => response.json())
             .then(data => {
@@ -22,7 +22,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     panoramaListContainer.appendChild(panoramaItem);
                 });
 
-                virtualTourContainer.style.display = "block"; // 가상 투어 화면 표시
+                virtualTourContainer.style.display = "block"; 
             })
             .catch(error => console.error("Error fetching panoramas:", error));
     });

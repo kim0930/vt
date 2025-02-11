@@ -2,6 +2,8 @@ from django.contrib import admin
 from django.urls import path, include
 from django.http import JsonResponse
 from django.shortcuts import redirect
+from django.conf.urls.static import static
+from django.conf import settings
 
 # 기본 루트 페이지 뷰
 def redirect_to_login(request):
@@ -14,4 +16,4 @@ urlpatterns = [
     path("projects/", include("projects.urls")),  # 👈 프로젝트 API 추가
     path("virtual_tour/", include("virtual_tour.urls")),  # 👈 프로젝트 API 추가
 
-]
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
