@@ -29,6 +29,12 @@ def get_first_folder_images(request, project_id):
         if not folders:
             return JsonResponse({"error": "No folders found"}, status=404)
 
+        first_folder = folders[0]
+        folder_path = os.path.join(project_root, first_folder)
+
+        # ✅ 첫 번째 폴더 내 이미지 파일 가져오기
+        images = sorted([f for f in os.listdir(folder_path) if f.lower().endswith(('png', 'jpg', 'jpeg'))])
+
         return JsonResponse({"folders": folders, "images": images})
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
