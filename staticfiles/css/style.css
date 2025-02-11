@@ -1,0 +1,97 @@
+/* 🚀 하단에 고정된 아이콘 버튼 */
+.bottom-icons {
+    position: fixed;   /* 화면 하단에 고정 */
+    bottom: 50px;      /* 하단에서 20px 위로 */
+    left: 50%;         /* 가운데 정렬 */
+    transform: translateX(-50%); /* 정확히 가운데 맞추기 */
+    display: flex;     /* 버튼을 가로 정렬 */
+    gap: 15px;         /* 버튼 사이 간격 */
+    background: rgba(255, 255, 255, 0.9); /* 약간 투명한 배경 */
+    padding: 10px 20px; /* 버튼 영역 패딩 */
+    border-radius: 10px; /* 둥근 모서리 */
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2); /* 약간의 그림자 */
+}
+
+/* 버튼 스타일 */
+.bottom-icons button {
+    border: none;
+    background: #007bff;
+    color: white;
+    padding: 10px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+/* 버튼 hover 효과 */
+.bottom-icons button:hover {
+    background: #0056b3;
+}
+
+/* 전체 페이지 레이아웃 설정 */
+.container {
+    display: flex;  /* 사이드바와 메인을 가로로 배치 */
+    min-height: 100vh; /* 전체 화면 높이 설정 */
+}
+
+
+/* 사이드바 스타일 */
+aside {
+    width: 250px; /* 고정된 사이드바 너비 */
+    height: 100vh; /* 화면 전체 높이 */
+    overflow-y: auto; /* 내용이 많으면 스크롤 */
+    background-color: #f4f4f4;
+    padding: 15px;
+    position: fixed;
+    left: 0;
+    top: 0;
+    transition: width 0.3s ease; /* 🔹 애니메이션 효과 */
+
+}
+
+/* 최소화 상태 */
+aside.minimized {
+    width: 50px; /* 🔹 최소화된 사이드바 크기 */
+}
+
+/* 최소화 시 내용 숨김 */
+aside.minimized #sidebar-content {
+    display: none;
+}
+
+/* 버튼 스타일 */
+#toggleSidebar {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+/* 메인 콘텐츠 영역 */
+main {
+    flex-grow: 1;  /* 남은 공간을 모두 차지 */
+    margin-left: 250px; /* 사이드바 너비만큼 여백 추가 */
+    padding: 20px;
+    transition: margin-left 0.3s ease; /* 🔹 부드러운 애니메이션 */
+}
+
+/* 사이드바 최소화 시 메인 콘텐츠 확장 */
+aside.minimized + main {
+    margin-left: 50px; /* 🔹 사이드바 최소화 시 확장 */
+}
+
+/* 푸터 스타일 */
+footer {
+    width: 100%;
+    height: 50px; /* 🔹 높이를 5px로 설정 */
+    background-color: #222;
+    color: white;
+    text-align: center;
+    padding: 3px;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+}

@@ -129,6 +129,9 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
+# STATIC_ROOT 추가 (static 파일을 모을 경로 지정)
+STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
+
 # STATICFILES_DIRS 추가 (static 폴더 위치 설정)
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static'),  # static 폴더를 프로젝트의 정적 파일 폴더로 지정

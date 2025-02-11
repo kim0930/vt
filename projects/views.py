@@ -109,8 +109,8 @@ def zip_file_upload(request, project_id):
     
     # ✅ 업로드된 폴더 목록 가져오기
     date_folders  = []
+    floor_folders = []
     folder_structure = {}
-
     if os.path.exists(project_root):
         date_folders  = sorted(os.listdir(project_root))  # 최상위 폴더 목록 가져오기
 
