@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>프로젝트 요약</title>
+    <link rel="stylesheet" href="styles/project_list.css"> <!-- 외부 CSS 연결 -->
+</head>
+<body>
+
+    <!-- 회원 정보 사이드바 -->
+    <aside class="sidebar">
+        <div class="member-info-box">
+            <h3>대우건설</h3>
+            <p>홍길동님</p>
+            <p>업종: 건설사</p>
+            <p>등록 프로젝트: 8개</p>
+        </div>
+    </aside>
+    
+    <!-- 프로젝트 요약 메인 화면 -->
+    <main class="main-content_list">
+        <div class="project-grid" id="project-cards">
+            <!-- 프로젝트 추가 버튼 -->
+            <div class="add-project-card">
+                <a href="project_add_min.html" class="add-btn">+ ADD</a>
+            </div>
+    
+            <!-- 프로젝트 카드 반복 -->
+            <!-- <div class="project-card">
+                <img src="../projects/imges/project-images.jpg" alt="프로젝트 이미지">
+                <h4>A 프로젝트</h4>
+                <p>2022.4.1 ~ 2025.12.31</p>
+                <p>공정률: 80%</p>
+                <div class="project-stats">
+                    <span class="new-alert">NEW 10건</span>
+                    <span class="issue-alert">⚠️ 2건</span>
+                    <span class="question-alert">❓ 1건</span>
+                </div>
+            </div>
+             -->
+            <!-- 추가 프로젝트 카드들 반복 -->
+        </div>
+    </main>
+    <script src="scripts/list.js"></script>
+</body>
+</html>

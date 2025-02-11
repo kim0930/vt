@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>새 프로젝트 추가</title>
+    <link rel="stylesheet" href="styles/project_add.css">
+</head>
+<body>
+
+      <!-- 사이드바 추가 -->
+      <aside class="sidebar">
+        <div class="member-info-box">
+            <h3>대우건설</h3>
+            <p>홍길동님</p>
+            <p>업종: 건설사</p>
+            <p>등록 프로젝트: 8개</p>
+        </div>
+      </aside>
+
+    <main class="main-content_add">
+        <h2 class="title">새 프로젝트 추가 화면</h2>
+
+        <form id="project-form" class="project-form">
+            <!-- 프로젝트명 -->
+            <div class="form-group">
+                <label for="project-name">프로젝트명</label>
+                <input type="text" id="project-name" name="name" required>
+            </div>
+
+            <!-- 공사기간 필드 (변경) -->
+            <div class="form-group">
+                <label for="project-period">공사기간</label>
+                <input type="text" id="project-period" name="period" readonly placeholder="공사기간을 선택하세요">
+            </div>
+
+            <!-- 날짜 선택 모달 추가 (시작일/종료일 선택 가능) -->
+            <div class="date-picker-modal" id="date-picker-modal">
+                <div class="date-picker-content">
+                    <h3 id="date-picker-title">시작일 선택</h3>
+                    <select id="year-select" class="date-picker-select"></select>
+                    <select id="month-select" class="date-picker-select"></select>
+                    <select id="day-select" class="date-picker-select"></select>
+                    <div class="date-picker-buttons">
+                        <button id="confirm-date-btn" type="button">확인</button>
+                        <button id="cancel-date-btn" type="button">취소</button>
+                    </div>
+                    
+                </div>
+            </div>
+
+            
+
+            <!-- 공사구분 -->
+            <div class="form-group">
+                <label for="project-category">공사구분</label>
+                <select id="project-category" name="category">
+                    <option value="">-- 공사구분 선택 --</option>
+                    <option value="건축공사">건축공사</option>
+                    <option value="토목공사">토목공사</option>
+                    <option value="플랜트공사">플랜트공사</option>
+                    <option value="조경공사">조경공사</option>
+                </select>
+            </div>
+
+            <!-- 세부 공사구분 필드 (변경) -->
+            <div class="form-group">
+                <label for="project-subcategory">세부 공사구분</label>
+                <select id="project-subcategory" name="subcategory">
+                    <option value="">-- 세부 공사구분 선택 --</option>
+                    <!-- 공사구분 선택 시 옵션이 동적으로 추가됨 -->
+                </select>
+            </div>
+
+            <!-- 프로젝트 담당자 이메일 -->
+            <div class="form-group">
+                <label for="project-email">프로젝트 담당자 이메일</label>
+                <input type="email" id="project-email" name="email">
+            </div>
+
+            <!-- 프로젝트 담당자 연락처 -->
+            <div class="form-group">
+                <label for="project-contact">프로젝트 담당자 연락처</label>
+                <input type="text" id="project-contact" name="contact">
+            </div>
+
+            <!-- 층별 평면도 업로드 -->
+            <div class="form-group">
+                <label for="project-area">층별 평면도</label>
+                <input type="file" id="project-area" name="area">
+            </div>
+
+            <!-- 대표 이미지 업로드 -->
+            <div class="form-group">
+                <label for="project-image">대표 이미지</label>
+                <input type="file" id="project-image" name="image" accept="image/*">
+            </div>
+
+            <!-- 프로젝트 저장 버튼 -->
+            <button type="submit" class="submit-btn">프로젝트 저장</button>
+        </form>
+    </main>
+
+    <script src="scripts/add.js"></script>
+</body>
+</html>
+
+
