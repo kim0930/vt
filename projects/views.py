@@ -22,13 +22,11 @@ def project_create(request):
             return redirect("project-list")  # 프로젝트 목록으로 이동
     else:
         form = ProjectForm()
-    
     return render(request, "projects/project_form.html", {"form": form})
 
 @login_required
 def project_update(request, project_id):
     project = get_object_or_404(Project, id=project_id, owner=request.user)
-    
     if request.method == "POST":
         form = ProjectForm(request.POST, instance=project)
         if form.is_valid():
