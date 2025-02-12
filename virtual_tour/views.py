@@ -7,14 +7,9 @@ from django.conf import settings
 
 def virtual_tour(request, project_id):
     project = get_object_or_404(Project, id=project_id)
-    panoramas = {"20": 1, "21": 2}
-    return render(request, "virtual_tour/virtual_tour.html", {
+    return render(request, "virtual_tour/index.html", {
         "project": project,
-        "panoramas": panoramas
     })
-
-    return JsonResponse({"panoramas_by_date": panoramas})
-
 
 def get_first_folder_images(request, project_id):
     """프로젝트의 첫 번째 폴더 내 이미지 리스트 반환"""

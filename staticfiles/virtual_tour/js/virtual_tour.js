@@ -5,9 +5,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
     virtualTourButton.addEventListener("click", function () {
         const projectId = this.dataset.projectId; 
-        fetch("{% url 'first-folder-images' project.id %}")
+        fetch("first-folder-image")
             .then(response => response.json())
             .then(data => {
+                console.log(data)
                 panoramaListContainer.innerHTML = "";
                 data.forEach(panorama => {
                     const panoramaItem = document.createElement("div");
@@ -33,3 +34,20 @@ document.addEventListener("DOMContentLoaded", function () {
         viewer.style.display = "block";
     }
 });
+
+// document.addEventListener("DOMContentLoaded", function() {
+//     fetch("{% url 'virtual_tour:first-folder-images' project.id %}")
+//     .then(response => response.json())
+//     .then(data => {
+//         console.log(data["folder_name"])
+//         console.log(data.folder_name)
+
+//         data.forEach(panorama => {
+
+//             const panoramaItem = document.createElement("div");
+//         });
+
+//     })
+//     .catch(error => console.error("Error fetching panoramas:", error));
+
+// });
