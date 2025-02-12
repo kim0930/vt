@@ -111,9 +111,13 @@
 
 
 	<!-- Map image -->
-	<figure id="map">
-		<img id="mapImage" src="" alt="Map"/>
-	</figure>
+	<div id="mapContainer" style="position: absolute; top: 10px; left: 10px; width: 300px; height: 200px;">
+		<button id="toggleMap" style="position: absolute; top: 5px; left: 5px; z-index: 1000; background: rgba(255, 255, 255, 0.8); border: none; padding: 5px; cursor: pointer;">−</button>
+		<figure id="map" style="position: relative; width: 100%; height: 100%; background: rgba(0,0,0,0.5); overflow: auto; transition: height 0.3s ease, width 0.3s ease;">
+			<img id="mapImage" src="" alt="Map Image" style="width: 100%; height: auto; display: block;">
+		</figure>
+		<div id="resizeHandle" style="position: absolute; right: 0px; bottom: 0px; width: 15px; height: 15px; background: gray; cursor: nwse-resize;"></div>
+	</div>
 
 	<!-- Full screen -->
 	<figure id="fullscreen">

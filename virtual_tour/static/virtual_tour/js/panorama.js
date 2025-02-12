@@ -10,6 +10,7 @@
 var camera, scene, renderer;
 var isUserInteracting = false;
 var isPopupOpen = false;
+var isResizing = false;
 var lon = 0;
 var lat = 0;
 var lonFactor = 0;
@@ -25,9 +26,11 @@ var panoramaDates= [];
 var isLoading = false;
 var lastPanoramaUID = -1;
 var mapUid = 0;
-
+var map_height = 200
+var map_width = 300
+var aspectRatio = map_width / map_height; // 초기 비율
 var toolTip;
-
+var isMapMinimized = false; // 초기 상태: 확장
 var timerId;
 var resolution = "default";
 
@@ -41,6 +44,7 @@ let calendar
 // 캘린더용
 
 let viewPort
+let animationId = null;
 
 /**
  * Starts panorama, creates a loading scene and triggers the loading of the start location. Starts animating.
@@ -86,7 +90,10 @@ function startPanorama(renderedDateStr, res, projectId) {
 		var loader = new LocationLoader();
 		loader.loadLocation(panodata.startLocation, startComplete);
 	});
-	animate();
+    if (animationId) {
+        cancelAnimationFrame(animationId);
+    }
+    animationId = requestAnimationFrame(animate);
 }
 
 function Date2DateStr(renderedDate) {
@@ -173,7 +180,6 @@ function startComplete(location) {
 	// 📌 갱신된 날짜로 캘린더 다시 생성
 	_('current-date').textContent = selectedDateStr;
 	calendar.regenerate(selectedDate); 
-
 }
 
 
@@ -441,6 +447,33 @@ function initEventListener() {
         });		
 	}
 
+	var toggleButton = _("toggleMap");
+	var mapContainer = _("mapContainer");
+	var map = _("map");
+	var mapImage = _("mapImage");
+	var resizeHandle = _("resizeHandle");
+
+	toggleButton.addEventListener("click", function () {
+		if (isMapMinimized) {
+			mapContainer.style.height = map_height+"px"; // 원래 크기
+			mapContainer.style.width = map_width+"px";
+			toggleButton.innerText = "−"; // 축소 버튼
+		} else {
+			mapContainer.style.height = "30px"; // 최소화 (제목 정도만 보이게)
+			mapContainer.style.width = "150px";
+			toggleButton.innerText = "+"; // 확장 버튼
+		}
+		isMapMinimized = !isMapMinimized;
+		updateResizeHandlePosition(); // 크기 변경 후 resizeHandle 위치 조정
+	});
+	
+	// 크기 조절 기능 추가
+	resizeHandle.addEventListener("click", function (event) {
+		isResizing = true;
+		isUserInteracting = false; 
+		event.preventDefault();
+	});
+
 }
 
 function toggleFullScreen(event) {
@@ -498,6 +531,37 @@ function setMapandNavigationHidden(hidden) {
 		if (sceneSwitch) sceneSwitch.style.display = 'block';
 	}
 
+}
+
+
+
+/**
+ * 맵 크기에 맞게 spotButton 위치를 동적으로 업데이트
+ * @param {number} newWidth 새로운 맵 너비
+ * @param {number} newHeight 새로운 맵 높이
+ */
+function updateSpotPositions(newWidth, newHeight) {
+    var mapSpots = document.querySelectorAll("#mapSpot, #mapSpotCurrent, #mapCamera");
+    mapSpots.forEach(function (spot) {
+        var originalX = parseFloat(spot.dataset.originalX);
+        var originalY = parseFloat(spot.dataset.originalY);
+        spot.style.left = (originalX * newWidth) + "px";
+        spot.style.top = (originalY * newHeight) + "px";
+    });
+}
+
+/**
+ * resizeHandle을 mapContainer의 오른쪽 아래에 고정
+ */
+function updateResizeHandlePosition() {
+    resizeHandle.style.right = "0px";
+    resizeHandle.style.bottom = "0px";
+}
+
+function updateToggleButtonPosition() {
+    var toggleButton = document.getElementById("toggleMap");
+    toggleButton.style.top = "5px";
+    toggleButton.style.left = "5px";
 }
 
 /**
@@ -644,6 +708,18 @@ function moveEventHandler(eventX, eventY, event) {
             toolTip.style.display = "none";
         }
     }
+	if (isResizing && !isMapMinimized && !isUserInteracting) { // 최소화 상태에서는 크기 조절 불가
+		var newWidth = event.clientX - mapContainer.offsetLeft;
+		var newHeight = newWidth / aspectRatio; // 비율 유지
+		console.log(newWidth, newHeight, aspectRatio)
+		if (newWidth > 100 && newHeight > 50) { // 최소 크기 제한
+			mapContainer.style.width = newWidth + "px";
+			mapContainer.style.height = newHeight + "px";
+			updateSpotPositions(newWidth, newHeight); // 스팟 위치 조정
+			updateResizeHandlePosition(); // resizeHandle 위치 업데이트
+			updateToggleButtonPosition(); // 🔹 리사이징 후 버튼 위치 업데이트
+		}
+	}
 }
 
 
@@ -696,6 +772,7 @@ function upEventHandler(event) {
 	lonFactor = 0;
 	latFactor = 0;
 	isUserInteracting = false;
+	isResizing = false;
 }
 
 /**
@@ -801,7 +878,7 @@ function showAbout(event) {
  * Update for new frame from Browser.
  */
 function animate() {
-	requestAnimationFrame(animate);
+	animationId = requestAnimationFrame(animate);
 	update();
 }
 
@@ -845,7 +922,7 @@ function update() {
 			//viewPort.style.transform = `rotate(${THREE.MathUtils.radToDeg(cameraRotation)}deg)`;
 			viewPort.style.transform = `rotate(${lon}deg)`;
 
-			console.log("카메라 회전 각도:", THREE.MathUtils.radToDeg(cameraRotation), lon)
+			// console.log("카메라 회전 각도:", THREE.MathUtils.radToDeg(cameraRotation), lon)
 		}} else {
 		setMapandNavigationHidden(true);
 		composer.render();

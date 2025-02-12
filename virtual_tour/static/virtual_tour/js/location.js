@@ -39,7 +39,6 @@ class Location extends THREE.Mesh {
      * @param {string} locationUid Unique ID for location
      */
     configureMap(parameters, locationUid) {
-        
         var map = _('map');
         if (!map) {
             return;
@@ -64,6 +63,7 @@ class Location extends THREE.Mesh {
             var spots = parameters['mapSpots'];
             spots.forEach(function (spot) {
                 var spotButton = document.createElement("button");
+                spotButton.style.position = "absolute";
                 if (spot.uid === locationUid) {
                     spotButton.id = "mapSpotCurrent";
                     
@@ -72,12 +72,17 @@ class Location extends THREE.Mesh {
                     viewPort.id = "mapCamera";
                     viewPort.style.left = (spot.mapPosX - 5) + "px";
                     viewPort.style.top = (spot.mapPosY+7.5) + "px";
-                    //viewPort.style.left = (spot.mapPosX+5) + "px";
-                    //viewPort.style.top = (spot.mapPosY+5) + "px";
+                    viewPort.dataset.originalX =  (spot.mapPosX - 5) / 300; // 300px 기준 상대 좌표 저장
+                    viewPort.dataset.originalY = (spot.mapPosY + 7.5)/ 200; // 200px 기준 상대 좌표 저장
+    
                     map.appendChild(viewPort)
                 } else {
                     spotButton.id = "mapSpot";
                 }
+
+                spotButton.dataset.originalX = (spot.mapPosX - spotButton.style.width/2) / 300; // 300px 기준 상대 좌표 저장
+                spotButton.dataset.originalY = (spot.mapPosY - spotButton.style.height/2)/ 200; // 200px 기준 상대 좌표 저장
+
                 spotButton.style.left = (spot.mapPosX - spotButton.style.width/2) + "px";
                 spotButton.style.top = (spot.mapPosY  - spotButton.style.height/2) + "px";
                 // spotButton.style.left = (spot.mapPosX) + "px";
@@ -96,7 +101,8 @@ class Location extends THREE.Mesh {
 
         // Position of Map
         map.style.display = "block";
-        map.style.left = 10 + "px";
-        map.style.top = 10 + "px";
+        map.style.left = 2 + "px";
+        map.style.top = 2 + "px";       
     }
 }
+
