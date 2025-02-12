@@ -1,11 +1,36 @@
-{% load static %}  
-
 <button id="virtual-tour-button" data-project-id="{{ project.id }}">파노라마 시작</button>
 <button id="virtual-tour-button" data-project-id="{{ project.id }}">파노라마 종료</button>
 
-<div id="virtual-tour-container" style="display: none;">
-    <div id="panorama-list"></div>
-    <div id="panorama-viewer"></div>
-</div>
-
-<script src="{% static 'virtual_tour/js/virtual_tour.js' %}"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        fetchFirstFolderImages();
+    });
+    
+    function fetchFirstFolderImages() {
+        const projectId = "{{ project.id }}";
+        fetch(`/virtual_tour/${projectId}/first_folder_images/`)  // API 호출
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    console.error("Error:", data.error);
+                    return;
+                }
+    
+                const imageContainer = document.getElementById("image-list");
+                imageContainer.innerHTML = ""; // 기존 데이터 초기화
+                console.log("haha")
+                data.images.forEach(image => {
+                    let imgElement = document.createElement("img");
+                    imgElement.src = '/media/projects/${projectId}/${data.folders[0]}/${image}';
+                    imgElement.alt = image;
+                    imgElement.style.width = "100px";
+                    imgElement.style.margin = "5px";
+                    imageContainer.appendChild(imgElement);
+                });
+            })
+            .catch(error => console.error("Failed to fetch images:", error));
+    }
+</script>
+    
+<div id="image-list"></div>
+    

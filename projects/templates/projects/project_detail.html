@@ -27,71 +27,19 @@
 
 
     <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            fetch("{% url 'virtual_tour:first-folder-images' project.id %}")
-            .then(response => response.json())
-            .then(data => {
-                console.log(data["folder_name"])
-                console.log(data.folder_name)
-
-                data.forEach(panorama => {
-
-                    const panoramaItem = document.createElement("div");
-                });
-
-            })
-            .catch(error => console.error("Error fetching panoramas:", error));
-
-        });
-        
         function loadApp(appType) {
             let url;
             if (appType === "virtual_tour") {
                 url = "{% url 'virtual_tour:virtual_tour' project.id%}";
+                console.log("project_detail.html > virtual_tour")
             } else if (appType === "3d_model") {
                 url = "{% url 'virtual_tour:virtual_tour' project.id%}";
+                console.log("project_detail.html > 3d_model")
             } else if (appType === "image_list") {
                 url = "{% url 'virtual_tour:virtual_tour' project.id%}";
+                console.log("project_detail.html > image_list")
             }
             document.getElementById("app-frame").src = url;
         }
-        </script>
+    </script>
 {% endblock %}
-
-
-
-
-<!-- 메인 콘텐츠: 기본적으로 버츄어투어 앱 로드 
-<div id="main-content">
-    <iframe id="app-frame" src="{% url 'virtual_tour' %}" width="100%" height="600px" frameborder="0"></iframe>
-</div>
-
-<div class="bottom-icons">
-    <button onclick="loadApp('virtual_tour')">🏠 버츄어투어</button>
-    <button onclick="loadApp('3d_model')">🏗 3D 모델</button>
-    <button onclick="loadApp('image_list')">🖼 이미지 리스트</button>
-</div>
-
-<script>
-    function loadProjectDetail(projectId) {
-        fetch(`/projects/${projectId}/detail/`)
-        .then(response => response.text())
-        .then(html => {
-            document.getElementById('project-detail').innerHTML = html;
-        })
-        .catch(error => console.error('Error:', error));
-    }
-
-    function loadApp(appType) {
-        let url;
-        if (appType === 'virtual_tour') {
-            url = "{% url 'virtual_tour' %}";
-        } else if (appType === '3d_model') {
-            url = "{% url '3d_model' %}";
-        } else if (appType === 'image_list') {
-            url = "{% url 'image_list' %}";
-        }
-        document.getElementById('app-frame').src = url;
-    }
-</script>
- -->

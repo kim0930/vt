@@ -5,6 +5,6 @@ app_name = "virtual_tour"
 
 urlpatterns = [
     path("<uuid:project_id>/", virtual_tour, name="virtual_tour"),
-    path("<uuid:project_id>/first-folder-images/", get_first_folder_images, name="first-folder-images"),
+    path("<uuid:project_id>/first_folder_images/", get_first_folder_images, name="first-folder-images"),
 
 ]
