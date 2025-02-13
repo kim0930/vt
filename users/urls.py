@@ -8,7 +8,7 @@ urlpatterns = [
     # path('login/', UserLoginView.as_view(), name='user-login'),
     path("login/", user_login, name="login"),
     path("logout/", user_logout, name="logout"),
-    path("logout/", LogoutView.as_view(next_page="login"), name="logout"),  # ✅ 로그아웃 추가
+    # path("logout/", LogoutView.as_view(next_page="login"), name="logout"),  # ✅ 로그아웃 추가
     path("register/", user_register, name="user-register"),
     path("activate/<uidb64>/<token>/", activate_user, name="activate-user"),
 

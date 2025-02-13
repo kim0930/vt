@@ -2,16 +2,107 @@
 
 {% block content %}
 <h2>📌 프로젝트 목록</h2>
-<a href="{% url 'project-create' %}" class="btn btn-primary">+ 새 프로젝트 추가</a>
-<ul>
+
+<!-- 프로젝트 목록 컨테이너 -->
+<div class="project-grid">
+    <div class="add-project-card">
+        <a href="{% url 'project-create' %}" class="add-btn">+ ADD</a>
+    </div>
+    
     {% for project in projects %}
-        <li>
-            <a href="{% url 'project-detail' project.id %}">{{ project.title }}</a> - {{ project.description }}
-            <a href="{% url 'project-update' project.id %}" class="btn btn-warning">수정</a>
-            <a href="{% url 'project-delete' project.id %}" class="btn btn-danger">삭제</a>
-        </li>
+        <div class="project-card">
+            <img src="{% if project.image %}{{ project.image.url }}{% else %}/static/default_project_image.jpg{% endif %}" 
+                 alt="프로젝트 이미지" class="project-image">
+             <!-- 프로젝트 제목 -->
+             <a href="{% url 'project-detail' project.id %}" class="project-title" data-project-id="{{ project.id }}">
+                {{ project.title }}  <!-- ✅ 필드 수정 완료 -->
+            </a>
+            <p>{{ project.start_date }} ~ {{ project.end_date }}</p>
+            <p>공정률: 0%</p>
+            <button class="upload-btn" data-url="{% url 'project-file-upload' project.id %}">업로드</button>
+            <div class="project-stats">
+                <span class="new-alert">NEW 10건</span>
+                <span class="issue-alert">⚠️ 2건</span>
+                <span class="question-alert">❓ 1건</span>
+            </div>
+            <div class="project-actions">
+                <a href="{% url 'project-update' project.id %}" class="btn btn-warning">수정</a>
+                <a href="{% url 'project-delete' project.id %}" class="btn btn-danger">삭제</a>
+            </div>
+        </div>
     {% empty %}
         <p>아직 생성된 프로젝트가 없습니다.</p>
     {% endfor %}
-</ul>
+</div>
+
+<!-- 스타일 추가 -->
+<style>
+    .project-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 20px;
+        padding: 20px;
+    }
+    .add-project-card {
+        height: 200px;
+        border: 2px dashed #bbb;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: #f9f9f9;
+        border-radius: 8px;
+    }
+    .add-btn {
+        font-size: 32px;
+        font-weight: bold;
+        color: #555;
+        background: none;
+        border: none;
+        cursor: pointer;
+    }
+    .project-card {
+        background: white;
+        border-radius: 8px;
+        padding: 15px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        text-align: center;
+    }
+    .project-card img {
+        width: 100%;
+        height: auto;
+        border-radius: 8px;
+    }
+    .project-stats {
+        display: flex;
+        justify-content: space-around;
+        margin-top: 10px;
+    }
+    .project-actions {
+        margin-top: 10px;
+        display: flex;
+        justify-content: space-between;
+    }
+    .btn {
+        padding: 5px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+        color: white;
+    }
+    .btn-warning {
+        background-color: #f0ad4e;
+    }
+    .btn-danger {
+        background-color: #d9534f;
+    }
+</style>
+    
+<script>
+    document.querySelectorAll('.upload-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            window.location.href = this.getAttribute('data-url');
+        });
+    });
+    </script>
 {% endblock %}
+

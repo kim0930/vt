@@ -1,62 +1,148 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background-color: #f4f4f4;
-        }
-        .login-container {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-        input {
-            width: 100%;
-            padding: 10px;
-            margin: 5px 0;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-        button {
-            width: 100%;
-            padding: 10px;
-            background: blue;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        .error-message {
-            color: red;
-            text-align: center;
-        }
-    </style>
+    <title>로그인 - Smart Building Supervision Platform</title>
 </head>
 <body>
     <div class="login-container">
-        <h2>Login</h2>
-        {% if messages %}
-            {% for message in messages %}
-                <p class="error-message">{{ message }}</p>
-            {% endfor %}
-        {% endif %}
-        <form method="post">
-            {% csrf_token %}
-            <input type="email" name="email" placeholder="Email" required>
-            <input type="password" name="password" placeholder="Password" required>
-            <button type="submit">로그인</button>
-        </form>
-        <p>아직 계정이 없으신가요?</p>
-        <a href="{% url 'user-register' %}" class="register-button">회원가입 </a>
+        <div class="login-box">
+            <div class="logo">
+                <img src="{% static 'seoultech_logo.png' %}" alt="SeoulTech Logo">
+            </div>
+            <h2>SMART BUILDING SUPERVISION PLATFORM</h2>
+
+            {% if messages %}
+                <div class="error-messages">
+                    {% for message in messages %}
+                        <p class="error-message">{{ message }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <form id="login-form" method="post">
+                {% csrf_token %}
+                <div class="input-group">
+                    <span class="icon">📧</span>
+                    <input type="email" name="email" placeholder="이메일" required>
+                </div>
+                <div class="input-group">
+                    <span class="icon">🔒</span>
+                    <input type="password" name="password" placeholder="비밀번호" required>
+                </div>
+                <button type="submit" class="login-btn">SIGN IN</button>
+            </form>
+
+            <div class="bottom-links">
+                <a href="#" onclick="alert('비밀번호 찾기 기능은 아직 구현되지 않았습니다.');">
+                    Forgot <span>Username</span> or <span>Password</span>?</a>
+                <a href="{% url 'user-register' %}" class="signup-link">Sign up</a>
+            </div>
+        </div>
     </div>
+
+    <style>
+
+        /* 전체 페이지 스타일 */
+    body {
+        margin: 0;
+        padding: 0;
+        font-family: Arial, sans-serif;
+        background: url('{% static "loigin.jpg" %}') no-repeat center center/cover;
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    /* 로그인 박스 배경 */
+    .login-container {
+        background-color: rgba(255, 255, 255, 0.7); /* 투명한 흰색 배경 */
+        padding: 40px;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.);
+        text-align: center;
+    }
+
+    /* 로고 */
+    .logo img {
+        width: 120px;
+        margin-bottom: 10px;
+    }
+
+    /* 제목 스타일 */
+    h2 {
+        font-size: 22px;
+        margin-bottom: 20px;
+    }
+
+    /* 입력 필드 스타일 */
+    .input-group {
+        display: flex;
+        align-items: center;
+        background: white;
+        padding: 10px;
+        margin-bottom: 15px;
+        border-radius: 5px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .input-group .icon {
+        font-size: 18px;
+        margin-right: 10px;
+    }
+
+    .input-group input {
+        border: none;
+        outline: none;
+        flex: 1;
+        font-size: 16px;
+        padding: 5px;
+    }
+
+    /* 로그인 버튼 스타일 */
+    .login-btn {
+        width: 100%;
+        padding: 12px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        font-size: 16px;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+
+    .login-btn:hover {
+        background-color: #0056b3;
+    }
+
+    /* 하단 링크 스타일 */
+    .bottom-links {
+        margin-top: 15px;
+        font-size: 14px;
+    }
+
+    .bottom-links a {
+        color: #333;
+        text-decoration: none;
+        margin-right: 10px;
+    }
+
+    .bottom-links a span {
+        text-decoration: underline;
+        font-weight: bold;
+    }
+
+    .signup-link {
+        color: blue;
+        font-weight: bold;
+    }
+
+
+
+
+    </style>
 </body>
 </html>

@@ -1,9 +1,10 @@
 from django.urls import path
-from .views import virtual_tour, get_panoramas_by_date
+from .views import virtual_tour, get_first_folder_images
 
 app_name = "virtual_tour"
 
 urlpatterns = [
-    path("<int:project_id>/", virtual_tour, name="virtual_tour"),
-    path("panoramas/<int:project_id>/", get_panoramas_by_date, name="get_panoramas_by_date"),
+    path("<uuid:project_id>/", virtual_tour, name="virtual_tour"),
+    path("<uuid:project_id>/first_folder_images/", get_first_folder_images, name="first-folder-images"),
+
 ]

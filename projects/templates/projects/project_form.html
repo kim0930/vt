@@ -1,11 +1,366 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h2>📌 새 프로젝트 생성</h2>
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit" class="btn btn-success">프로젝트 생성</button>
-</form>
-<a href="{% url 'project-list' %}" class="btn btn-secondary">← 돌아가기</a>
+<div class="form-container">
+    <h2 class="title">새 프로젝트 추가 화면</h2>
+
+    <form id="project-form" method="post" enctype="multipart/form-data" class="project-form">
+        {% csrf_token %}
+
+        <!-- 프로젝트명 -->
+        <div class="form-group">
+            <label for="id_title">프로젝트명</label>
+            <input type="text" id="id_title" name="title" required>
+        </div>
+
+        <!-- 공사기간 -->
+        <div class="form-group">
+            <label for="project-period">공사기간</label>
+            <input type="text" id="project-period" name="period" readonly placeholder="공사기간을 선택하세요">
+        </div>
+
+        <!-- 날짜 선택 모달 -->
+        <div class="date-picker-modal" id="date-picker-modal">
+            <div class="date-picker-content">
+                <h3 id="date-picker-title">시작일 선택</h3>
+                <select id="year-select" class="date-picker-select"></select>
+                <select id="month-select" class="date-picker-select"></select>
+                <select id="day-select" class="date-picker-select"></select>
+                <div class="date-picker-buttons">
+                    <button id="confirm-date-btn" type="button">확인</button>
+                    <button id="cancel-date-btn" type="button">취소</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 공사구분 -->
+        <div class="form-group">
+            <label for="project-category">공사구분</label>
+            <select id="project-category" name="category">
+                <option value="">-- 공사구분 선택 --</option>
+                <option value="건축공사">건축공사</option>
+                <option value="토목공사">토목공사</option>
+                <option value="플랜트공사">플랜트공사</option>
+                <option value="조경공사">조경공사</option>
+            </select>
+        </div>
+
+        <!-- 세부 공사구분 -->
+        <div class="form-group">
+            <label for="project-subcategory">세부 공사구분</label>
+            <select id="project-subcategory" name="subcategory">
+                <option value="">-- 세부 공사구분 선택 --</option>
+            </select>
+        </div>
+
+        <!-- 프로젝트 담당자 이메일 -->
+        <div class="form-group">
+            <label for="id_email">프로젝트 담당자 이메일</label>
+            <input type="email" id="id_email" name="email">
+        </div>
+
+        <!-- 프로젝트 담당자 연락처 -->
+        <div class="form-group">
+            <label for="id_contact">프로젝트 담당자 연락처</label>
+            <input type="text" id="id_contact" name="contact">
+        </div>
+
+        <!-- 층별 평면도 업로드 -->
+        <div class="form-group">
+            <label for="id_area">층별 평면도</label>
+            <input type="file" id="id_area" name="area">
+        </div>
+
+        <!-- 대표 이미지 업로드 -->
+        <div class="form-group">
+            <label for="id_image">대표 이미지</label>
+            <input type="file" id="id_image" name="image" accept="image/*">
+        </div>
+
+        <!-- 프로젝트 저장 버튼 -->
+        <button type="submit" class="submit-btn">프로젝트 저장</button>
+    </form>
+</div>
+<style>
+
+    /* 전체 페이지 스타일 */
+body {
+    font-family: Arial, sans-serif;
+    display: flex;
+    margin: 0;
+    padding: 0;
+    height: 100vh;
+}
+
+/* 사이드바 */
+.sidebar {
+    width: 250px;
+    background-color: #f4f4f4;
+    padding: 20px;
+    border-right: 1px solid #ddd;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    height: 100%;
+    overflow-y: auto;
+}
+
+.form-container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+
+/* 사용자 정보 박스 */
+.member-info-box {
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    width: 100%;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+    box-sizing: border-box;
+}
+
+/* 메인 컨텐츠 */
+.main-content_add {
+    padding: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+    font-family: Arial, sans-serif;
+}
+
+/* 제목 스타일 */
+.title {
+    font-size: 24px;
+    color: green;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+/* 프로젝트 폼 스타일 */
+.project-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* 입력 그룹 스타일 */
+.form-group {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+label {
+    width: 150px;
+    font-weight: bold;
+}
+
+input, select {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+/* 제출 버튼 스타일 */
+.submit-btn {
+    width: 100%;
+    padding: 10px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.submit-btn:hover {
+    background-color: #0056b3;
+}
+
+/* 날짜 선택 모달 */
+.date-picker-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.date-picker-modal.show {
+    visibility: visible;
+    opacity: 1;
+}
+
+.date-picker-content {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    width: 300px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.date-picker-select {
+    width: 100%;
+    padding: 8px;
+    margin: 10px 0;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+.date-picker-buttons {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+}
+
+.date-picker-buttons button {
+    padding: 8px 10px;
+    border: none;
+    background-color: #007bff;
+    color: white;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.date-picker-buttons button:hover {
+    background-color: #0056b3;
+}
+
+
+
+
+
+</style>
+
+<script>
+    // ✅ 공사구분과 세부 공사구분 매핑 데이터
+    const subcategoriesByCategory = {
+        "건축공사": ["주거용 건축물", "사무실용 건축물", "상업용 건축물", "공업용 건축물", "병원", "학교", "기타"],
+        "토목공사": ["도로공사", "교량공사", "터널공사", "배수공사"],
+        "플랜트공사": ["전력설비", "조명설비", "배선공사", "소방설비"],
+        "조경공사": ["조경설계", "조경식재", "조경시설물"]
+    };
+
+    const categorySelect = document.getElementById("project-category");
+    const subcategorySelect = document.getElementById("project-subcategory");
+
+    // ✅ 공사구분 변경 시 세부 공사구분 동적 추가
+    categorySelect.addEventListener("change", function () {
+        const selectedCategory = categorySelect.value;
+        subcategorySelect.innerHTML = "";
+        if (subcategoriesByCategory[selectedCategory]) {
+            subcategoriesByCategory[selectedCategory].forEach(subcategory => {
+                const option = document.createElement("option");
+                option.value = subcategory;
+                option.textContent = subcategory;
+                subcategorySelect.appendChild(option);
+            });
+        }
+    });
+
+    // ✅ 날짜 선택 기능
+    let selectingStartDate = true;
+    let startDate = "";
+    let endDate = "";
+
+    const projectPeriodInput = document.getElementById("project-period");
+    const datePickerModal = document.getElementById("date-picker-modal");
+    const datePickerTitle = document.getElementById("date-picker-title");
+    const yearSelect = document.getElementById("year-select");
+    const monthSelect = document.getElementById("month-select");
+    const daySelect = document.getElementById("day-select");
+
+    projectPeriodInput.addEventListener("click", openDatePicker);
+
+    function openDatePicker() {
+        selectingStartDate = true;
+        datePickerTitle.textContent = "시작일 선택";
+        datePickerModal.classList.add("show");
+        populateYearSelect();
+        populateMonthSelect();
+    }
+
+    function populateYearSelect() {
+        yearSelect.innerHTML = "";
+        const currentYear = new Date().getFullYear();
+        for (let year = currentYear; year <= currentYear + 10; year++) {
+            const option = document.createElement("option");
+            option.value = year;
+            option.textContent = year + "년";
+            yearSelect.appendChild(option);
+        }
+    }
+
+    function populateMonthSelect() {
+        monthSelect.innerHTML = "";
+        for (let month = 1; month <= 12; month++) {
+            const option = document.createElement("option");
+            option.value = month;
+            option.textContent = month + "월";
+            monthSelect.appendChild(option);
+        }
+        populateDaySelect();
+    }
+
+    function populateDaySelect() {
+        daySelect.innerHTML = "";
+        const selectedYear = parseInt(yearSelect.value);
+        const selectedMonth = parseInt(monthSelect.value);
+        const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+        for (let day = 1; day <= daysInMonth; day++) {
+            const option = document.createElement("option");
+            option.value = day;
+            option.textContent = day + "일";
+            daySelect.appendChild(option);
+        }
+    }
+
+    monthSelect.addEventListener("change", populateDaySelect);
+
+    document.getElementById("confirm-date-btn").addEventListener("click", function () {
+        const selectedDate = `${yearSelect.value}-${monthSelect.value.padStart(2, "0")}-${daySelect.value.padStart(2, "0")}`;
+        if (selectingStartDate) {
+            startDate = selectedDate;
+            selectingStartDate = false;
+            datePickerTitle.textContent = "종료일 선택";
+            populateYearSelect();
+            populateMonthSelect();
+        } else {
+            endDate = selectedDate;
+            projectPeriodInput.value = `${startDate} ~ ${endDate}`;
+            closeDatePicker();
+        }
+    });
+
+    document.getElementById("cancel-date-btn").addEventListener("click", closeDatePicker);
+
+    function closeDatePicker() {
+        datePickerModal.classList.remove("show");
+        selectingStartDate = true;
+    }
+</script>
+
 {% endblock %}

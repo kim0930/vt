@@ -7,42 +7,59 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Virtual Tour Project{% endblock %}</title>
 
-    {% comment %} ✅✅✅ 일단 임시로 static/css/stype.css 파일 적용되지 않도록 설정해놓음 {% endcomment %}
-    <link rel="stylesheet" type="text/css" href="{% static 'css/style.css' %}">  <!-- ✅ 정적 CSS 로드 -->
-    {% comment %} <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"> {% endcomment %}
+    <!-- <link rel="stylesheet" type="text/css" href="{% static 'css/style.css' %}">   -->
+    <!-- ✅ 정적 CSS 로드 -->
 
 </head>
 <body>
     <div class="container">
-        <aside id="sidebar">
-            <button id="toggleSidebar">☰</button> <!-- 사이드바 최소화 버튼 -->
-            <div id="sidebar-content">
-                {% block sidebar %}
-                <!-- 🟢 사이드바 추가 -->
-                {% if user.is_authenticated %}
-                <div class="col-md-3 bg-light p-3">
-                    <h4>👤 사용자 정보</h4>
-                    <p><strong>이메일:</strong> {{ user.email }}</p>
-                    <p><strong>휴대폰 번호:</strong> {{ user.phone_number }}</p>
-                    <a href="{% url 'logout' %}" class="btn btn-danger">로그아웃</a>
+        <div class="content-wrapper">
+            <aside id="sidebar">
+                <button id="toggleSidebar">☰</button>
+                <div id="sidebar-content">
+                    {% block sidebar %}
+                    {% if user.is_authenticated %}
+                    <div class="col-md-3 bg-light p-3">
+                        <h4>👤 사용자 정보</h4>
+                        <p><strong>이메일:</strong> {{ user.email }}</p>
+                        <p><strong>휴대폰 번호:</strong> {{ user.phone_number }}</p>
+                        <a href="{% url 'logout' %}" class="btn btn-danger">로그아웃</a>
+                    </div>
+                    {% endif %}
+                    {% endblock %}
                 </div>
-                {% endif %}
-                {% endblock %}
-            </div>
-        </aside>
-        <main>
-            <div class="{% if user.is_authenticated %}col-md-9{% else %}col-md-12{% endif %}">
+            </aside>
+            <main class="main-content">
                 {% block content %}{% endblock %}
-            </div>
-        </main>
-    
-        <footer>
-            <p>© 2025 Virtual Tour System</p>
-        </footer>
+            </main>
+        </div>
     </div>
 
-    <!-- JavaScript 추가 -->
-    <script src="{% static 'js/sidebar.js' %}"></script>
-    
+    <style>
+        .container {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .content-wrapper {
+            display: flex;
+            flex: 1;
+        }
+
+        #sidebar {
+            width: 250px;
+            min-width: 250px;
+            background: #f4f4f4;
+            padding: 20px;
+            border-right: 1px solid #ddd;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 20px;
+        }
+    </style>
 </body>
+
 </html>
