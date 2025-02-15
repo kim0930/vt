@@ -6,4 +6,4 @@ class ProjectSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Project
-        fields = ['id', 'title', 'client', 'contractor', 'designer', 'description', 'owner', 'created_at', 'image', 'uuid']
+        fields = ['id', 'title', 'client', 'contractor', 'designer', 'description', 'owner', 'created_at', 'image', 'uuid', 'start_date', 'end_date']

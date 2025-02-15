@@ -21,7 +21,8 @@ class Project(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)  # 생성일
     updated_at = models.DateTimeField(auto_now=True)  # ✅ 수정 시 자동 업데이트
     image = models.ImageField(upload_to="project_images/", blank=True, null=True)  # ✅ 대표 이미지 필드 추가
-    
+    start_date = models.DateField("공사 시작일")
+    end_date = models.DateField("공사 종료일")
     def __str__(self):
         return f"{self.title} ({self.id})"  # 프로젝트명과 고유 ID 함께 표시
     
@@ -34,7 +35,7 @@ class Project(models.Model):
                 img = Image.open(image_path)
 
                 # ✅ 이미지 리사이징 (최대 너비/높이 지정)
-                max_size = (100, 100)  # 해상도 조정 (예: 800x800)
+                max_size = (300, 200)  # 해상도 조정 (예: 800x800)
                 if img.width > max_size[0] or img.height > max_size[1]:  
                     img.thumbnail(max_size, Image.ANTIALIAS)
 

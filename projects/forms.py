@@ -16,8 +16,11 @@ class ProjectForm(forms.ModelForm):
 
     class Meta:
         model = Project
-        fields = ["title", "client", "cm", "contractor", "designer", "description", "image"]
-
+        fields = ["title", "client", "cm", "contractor", "designer", "description", "image", 'start_date', 'end_date']
+        widgets = {
+            'start_date': forms.DateInput(attrs={'type': 'date'}),
+            'end_date': forms.DateInput(attrs={'type': 'date'}),
+        }
 class MultipleFileUploadForm(forms.Form):
     files = forms.FileField(
         widget=forms.ClearableFileInput(attrs={"allow_multiple_selected": True}),  # ✅ 다중 파일 업로드 지원
