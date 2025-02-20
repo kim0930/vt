@@ -13,6 +13,7 @@ from django.core.files.base import ContentFile
 from django.conf import settings
 
 from .models import Project
+from .models import PanoramaImage
 from .serializers import ProjectSerializer
 
 from .forms import ProjectForm 
@@ -94,10 +95,33 @@ def zip_file_upload(request, project_id):
             with open(zip_path, "wb") as f:
                 for chunk in zip_file.chunks():
                     f.write(chunk)
-
+            
+            extracted_images = []  # ✅ DB에 저장할 이미지 목록
             with zipfile.ZipFile(zip_path, "r") as zip_ref:
                 zip_ref.extractall(upload_root)  # 압축 해제
 
+                for file_name in zip_ref.namelist():
+                    file_path = os.path.join(upload_root, file_name)
+
+                    # ✅ 파일이 {date}/{floor}/*.jpg 구조인지 확인
+                    path_parts = file_name.split("/")
+                    if len(path_parts) == 2:
+                        date_folder = path_parts[0]  # ✅ 날짜 폴더 (YYYY-MM-DD)
+                        floor_folder = path_parts[1]  # ✅ 층 폴더 (1F, B1F 등)
+                        image_name = path_parts[2]  # ✅ 이미지 파일명
+
+                        if image_name.lower().endswith((".jpg", ".jpeg", ".png")):
+                            relative_path = os.path.join("projects", str(project.id), file_name)
+
+                            # ✅ PanoramaImage 모델에 저장
+                            PanoramaImage.objects.create(
+                                project=project,
+                                image=relative_path,  # Django ImageField 경로 저장
+                                date=date_folder,
+                                floor=floor_folder,
+                            )
+            
+            
             os.remove(zip_path)  # ✅ 원본 ZIP 파일 삭제
 
             return redirect("project-file-upload", project_id=project.id)
@@ -112,18 +136,17 @@ def zip_file_upload(request, project_id):
     floor_folders = []
     folder_structure = {}
     if os.path.exists(project_root):
-        date_folders  = sorted(os.listdir(project_root))  # 최상위 폴더 목록 가져오기
-
+        all_folders_files  = sorted(os.listdir(project_root))  # 최상위 폴더 목록 가져오기
+        date_folders = [x for x in all_folders_files if os.path.isdir(os.path.join(project_root,x))]
         for date in date_folders :
             folder_path = os.path.join(project_root, date)
             if os.path.isdir(folder_path):  # 폴더인 경우만 처리
                 folder_structure[date] = sorted(os.listdir(folder_path))  # 내부 폴더 가져오기
         all_floors = [item for sublist in folder_structure.values() for item in sublist]
         floor_folders = list(set(all_floors))
-    
+
     # 정렬
     floor_folders = sorted(floor_folders, key=floor_key)
-    
     return render(request, "projects/project_file_upload.html", {
         "project": project,
         "form": form,

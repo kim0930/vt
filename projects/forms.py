@@ -21,6 +21,7 @@ class ProjectForm(forms.ModelForm):
             'start_date': forms.DateInput(attrs={'type': 'date'}),
             'end_date': forms.DateInput(attrs={'type': 'date'}),
         }
+        
 class MultipleFileUploadForm(forms.Form):
     files = forms.FileField(
         widget=forms.ClearableFileInput(attrs={"allow_multiple_selected": True}),  # ✅ 다중 파일 업로드 지원

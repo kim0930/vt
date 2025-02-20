@@ -8,9 +8,13 @@ import uuid
 
 User = get_user_model()
 
+def project_image_upload_path(instance, filename):
+    """이미지가 projects/{id}/ 경로에 저장되도록 설정"""
+    return os.path.join("projects", str(instance.id), filename)
+
+
 class Project(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)  # 고유 ID (UUID)
-
     title = models.CharField(max_length=255)  # 프로젝트명
     client = models.CharField(max_length=255, blank=True, null=True)   # 발주처
     cm = models.CharField(max_length=255, blank=True, null=True)   # 감리사
@@ -20,7 +24,7 @@ class Project(models.Model):
     owner = models.ForeignKey(User, on_delete=models.CASCADE)  # 프로젝트 소유자 (사용자)
     created_at = models.DateTimeField(auto_now_add=True)  # 생성일
     updated_at = models.DateTimeField(auto_now=True)  # ✅ 수정 시 자동 업데이트
-    image = models.ImageField(upload_to="project_images/", blank=True, null=True)  # ✅ 대표 이미지 필드 추가
+    image = models.ImageField(upload_to=project_image_upload_path, blank=True, null=True)  # ✅ 대표 이미지 필드 추가
     start_date = models.DateField("공사 시작일")
     end_date = models.DateField("공사 종료일")
     def __str__(self):
@@ -37,7 +41,7 @@ class Project(models.Model):
                 # ✅ 이미지 리사이징 (최대 너비/높이 지정)
                 max_size = (300, 200)  # 해상도 조정 (예: 800x800)
                 if img.width > max_size[0] or img.height > max_size[1]:  
-                    img.thumbnail(max_size, Image.ANTIALIAS)
+                    img.thumbnail(max_size, Image.LANCZOS)
 
                     # ✅ 원본 파일을 리사이징된 이미지로 덮어쓰기
                     img.save(image_path, format=img.format if img.format else "JPEG", quality=70)
@@ -45,3 +49,14 @@ class Project(models.Model):
     def image_folder_path(self):  # 파노라마 데이터셋 폴더 업로드
         """프로젝트별 이미지 폴더 경로 (media/projects/YYYY-MM-DD/)"""
         return os.path.join("projects", self.created_at.strftime("%Y-%m-%d"))
+
+
+class PanoramaImage(models.Model):
+    project = models.ForeignKey("Project", on_delete=models.CASCADE)
+    image = models.ImageField(upload_to="projects/%Y/%m/%d/")
+    date = models.CharField(max_length=20)  # 업로드된 날짜 폴더
+    floor = models.CharField(max_length=10)  # 층 정보
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.project} - {self.date} - {self.floor} - {self.image.name}"
