@@ -13,7 +13,7 @@
             <tr>
                 <th></th>
                 {% for date in date_folders %}
-                <th><input type="checkbox" class="column-checkbox" value="{{ date }}"></th>
+                <th>Delete<input type="checkbox" class="column-checkbox" value="{{ date }}"></th>
                 {% endfor %}
             </tr>
 
@@ -31,9 +31,26 @@
                 {% for date, folders in folder_structure.items %}
                 <td>
                     {% if floor in folders %}
-                        ✅
+                        {% if date in date_folders_sfm and floor in floor_folders_sfm %}
+                            <!-- ✅ SFM 편집 버튼 -->
+                            <form method="post" action="{% url 'panorama-editor' project.id%}">
+                                {% csrf_token %}
+                                <input type="hidden" name="date" value="{{ date }}">
+                                <input type="hidden" name="floor" value="{{ floor }}">
+                                <button type="submit" id="edit_sfm" value="{{ date }}-{{ floor }}">✏️ Edit </button>
+                            </form>
+                        {% else %}
+                            <!-- ✅ SFM 실행 버튼 -->
+                            <form method="post" action="{% url 'sfm-execute' project.id%}">
+                                {% csrf_token %}
+                                <input type="hidden" name="date" value="{{ date }}">
+                                <input type="hidden" name="floor" value="{{ floor }}">
+                                <button type="submit" id="run_sfm" value="{{ date }}-{{ floor }}">🎥 SfM </button>
+                            </form>
+
+                        {% endif %}
                     {% else %}
-                        ❌
+                        
                     {% endif %}
                 </td>
                 {% endfor %}
@@ -57,6 +74,7 @@
 </form>
 
 <a href="{% url 'project-list' %}" class="btn btn-secondary">돌아가기</a>
+
 
 <script>
 document.getElementById("delete-selected").addEventListener("click", function() {

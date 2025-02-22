@@ -9,6 +9,7 @@
  */
 var camera, scene, renderer;
 var isUserInteracting = false;
+var isMeasureMode = false;
 var isPopupOpen = false;
 var isResizing = false;
 var lon = 0;
@@ -45,6 +46,10 @@ let calendar
 
 let viewPort
 let animationId = null;
+
+// Measurement mode
+let points = [];
+
 
 /**
  * Starts panorama, creates a loading scene and triggers the loading of the start location. Starts animating.
@@ -230,6 +235,9 @@ function transitToLocation(locationIndex, reset) {
 				lat = 2;
 				lon = -103;
 			}
+
+			// console.log("target:", location.uid, lat, lon)
+
 			lastPanoramaUID = location.uid;
 			mapUid = location.mapUid;
 			updateSceneSwitchButton();
@@ -447,33 +455,87 @@ function initEventListener() {
         });		
 	}
 
-	var toggleButton = _("toggleMap");
+	var toggleMap = _("toggleMap");
 	var mapContainer = _("mapContainer");
 	var map = _("map");
 	var mapImage = _("mapImage");
-	var resizeHandle = _("resizeHandle");
 
-	toggleButton.addEventListener("click", function () {
+	toggleMap.addEventListener("click", function () {
 		if (isMapMinimized) {
 			mapContainer.style.height = map_height+"px"; // 원래 크기
 			mapContainer.style.width = map_width+"px";
-			toggleButton.innerText = "−"; // 축소 버튼
+			toggleMap.innerText = "−"; // 축소 버튼
 		} else {
 			mapContainer.style.height = "30px"; // 최소화 (제목 정도만 보이게)
 			mapContainer.style.width = "150px";
-			toggleButton.innerText = "+"; // 확장 버튼
+			toggleMap.innerText = "+"; // 확장 버튼
 		}
 		isMapMinimized = !isMapMinimized;
 		updateResizeHandlePosition(); // 크기 변경 후 resizeHandle 위치 조정
 	});
 	
-	// 크기 조절 기능 추가
+	// map 크기 조절 기능
+	var resizeHandle = _("resizeHandle");
 	resizeHandle.addEventListener("click", function (event) {
 		isResizing = true;
 		isUserInteracting = false; 
 		event.preventDefault();
 	});
 
+	// 치수 측정 모드
+	var measureModeBtn = _("measureModeBtn");
+	measureModeBtn.addEventListener("click", function (event){
+		isMeasureMode = true; 
+		if (measureModeBtn) measureModeBtn.style.display = 'none';
+		if (measureModeExitBtn) measureModeExitBtn.style.display = 'block';
+
+		points = []; // 초기화
+		alert("첫 번째 점을 클릭하세요.");
+		event.preventDefault();
+	});
+
+	// 치수 측정 모드 종료 
+	var measureModeExitBtn = _("measureModeExitBtn");
+	measureModeExitBtn.addEventListener("click", function (event){
+		isMeasureMode = false; 
+		if (measureModeBtn) measureModeBtn.style.display = 'block';
+		if (measureModeExitBtn) measureModeExitBtn.style.display = 'none';
+		console.log(isMeasureMode)
+		event.preventDefault();
+	});
+
+
+}
+
+// 두 점을 연결하는 선 그리기
+function drawLine(p1, p2) {
+    let line = document.createElement("div");
+    line.style.position = "absolute";
+    line.style.left = `${p1.x}px`;
+    line.style.top = `${p1.y}px`;
+    line.style.width = `${Math.hypot(p2.x - p1.x, p2.y - p1.y)}px`;
+    line.style.height = "2px";
+    line.style.background = "red";
+    line.style.transform = `rotate(${Math.atan2(p2.y - p1.y, p2.x - p1.x)}rad)`;
+    document.body.appendChild(line);
+}
+
+// 두 점 사이 거리 계산
+function calculateDistance(p1, p2) {
+    return Math.hypot(p2.x - p1.x, p2.y - p1.y);
+}
+
+// 측정된 거리 표시
+function displayMeasurement(p1, p2, distance) {
+    let label = document.createElement("div");
+    label.style.position = "absolute";
+    label.style.left = `${(p1.x + p2.x) / 2}px`;
+    label.style.top = `${(p1.y + p2.y) / 2}px`;
+    label.style.color = "white";
+    label.style.background = "black";
+    label.style.padding = "2px 5px";
+    label.innerText = `${distance.toFixed(100)} px`;
+    document.body.appendChild(label);
 }
 
 function toggleFullScreen(event) {
@@ -655,7 +717,7 @@ function moveEventHandler(eventX, eventY, event) {
     toolTip.style.left = eventX + 20 + "px";
     toolTip.style.top = eventY + 20 + "px";
 
-    if (isPopupOpen) {
+    if (isPopupOpen || isMeasureMode) {
         return;
     }
 
@@ -733,6 +795,30 @@ function downEventHandler(eventX, eventY, event) {
     if (isPopupOpen) {
         return;
     }
+
+    if (isMeasureMode) {
+		let x = event.clientX;
+		let y = event.clientY;
+	
+		points.push({ x, y });
+		if (points.length === 1) {
+			alert("다음 점을 클릭하세요.");
+		} else if (points.length === 2) {
+			drawLine(points[0], points[1]);
+			let distance = calculateDistance(points[0], points[1]); // 거리 계산
+			displayMeasurement(points[0], points[1], distance);
+			isMeasureMode = false; // 측정 완료 후 비활성화
+			points = []
+		}
+	
+		console.log(points)
+        return;
+    };
+
+
+
+
+
     event.preventDefault();
 
     // update the mouse variable
@@ -783,7 +869,7 @@ function upEventHandler(event) {
  */
 function wheelEventHandler(eventX, eventY, event) {
 	event.preventDefault();
-	if (isPopupOpen) {
+	if (isPopupOpen || isMeasureMode) {
 		return;
 	}
 

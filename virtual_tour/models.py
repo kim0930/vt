@@ -8,7 +8,7 @@ User = get_user_model()
 
 class VirtualTour(models.Model):
     owner = models.ForeignKey(User, on_delete=models.CASCADE)  # 프로젝트 소유자 (사용자)
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="panoramas")
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name="VirtualTour")
     settings = models.JSONField(default=dict)  # 가상투어 설정 값 (뷰어 속성 등)
     created_at = models.DateTimeField(auto_now_add=True)
     def __str__(self):

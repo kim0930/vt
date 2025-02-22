@@ -12,7 +12,6 @@ def project_image_upload_path(instance, filename):
     """이미지가 projects/{id}/ 경로에 저장되도록 설정"""
     return os.path.join("projects", str(instance.id), filename)
 
-
 class Project(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)  # 고유 ID (UUID)
     title = models.CharField(max_length=255)  # 프로젝트명
@@ -52,11 +51,49 @@ class Project(models.Model):
 
 
 class PanoramaImage(models.Model):
-    project = models.ForeignKey("Project", on_delete=models.CASCADE)
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)  # 고유 ID
+    project = models.ForeignKey(Project, on_delete=models.CASCADE)
     image = models.ImageField(upload_to="projects/%Y/%m/%d/")
     date = models.CharField(max_length=20)  # 업로드된 날짜 폴더
     floor = models.CharField(max_length=10)  # 층 정보
     uploaded_at = models.DateTimeField(auto_now_add=True)
+    position_x = models.FloatField(default=0.0)  # 3D 평면 상 X 좌표
+    position_y = models.FloatField(default=0.0)  # 3D 평면 상 Y 좌표
+    position_z = models.FloatField(default=0.0)  # 3D 평면 상 Y 좌표
+    front_x = models.FloatField(default=0.0)  # 3d 평면 상 앞방향 X
+    front_y = models.FloatField(default=0.0)  # 3d 평면 상 앞방향 Y
+    front_z = models.FloatField(default=0.0)  # 3d 평면 상 앞방향 Z
 
+    sfm =  models.CharField(max_length=10)
+    vt =  models.CharField(max_length=10)
     def __str__(self):
         return f"{self.project} - {self.date} - {self.floor} - {self.image.name}"
+    
+class PanoramaLink(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    from_panorama = models.ForeignKey(PanoramaImage, on_delete=models.CASCADE, related_name="outgoing_links")
+    to_panorama = models.ForeignKey(PanoramaImage, on_delete=models.CASCADE, related_name="incoming_links")
+    description = models.CharField(max_length=255, blank=True, null=True)  # 연결 설명 (옵션)
+
+    def __str__(self):
+        return f"{self.from_panorama.name} → {self.to_panorama.name}"
+    
+# 파노라마 생성
+# p1 = Panorama.objects.create(name="파노라마 1", project=project)
+# p2 = Panorama.objects.create(name="파노라마 2", project=project)
+# p3 = Panorama.objects.create(name="파노라마 3", project=project) 
+
+# 파노라마 간 연결
+# PanoramaLink.objects.create(from_panorama=p1, to_panorama=p2)
+# PanoramaLink.objects.create(from_panorama=p1, to_panorama=p3)
+# PanoramaLink.objects.create(from_panorama=p2, to_panorama=p3)
+
+# # 특정 파노라마에서 연결된 파노라마 조회
+# p1_links = p1.outgoing_links.all()
+# for link in p1_links:
+#     print(f"{p1.name} → {link.to_panorama.name}")
+    
+# # 특정 파노라마로 연결된 다른 파노라마 조회
+# p3_links = p3.incoming_links.all()
+# for link in p3_links:
+#     print(f"{link.from_panorama.name} → {p3.name}")

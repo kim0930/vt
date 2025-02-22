@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>파노라마 2D 편집</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        #editor-container { position: relative; width: 800px; height: 600px; background: #eee; border: 1px solid #ccc; }
+        .panorama-point {
+            position: absolute; width: 20px; height: 20px;
+            background: blue; border-radius: 50%;
+            cursor: grab; display: flex; justify-content: center; align-items: center;
+        }
+        .panorama-arrow {
+            position: absolute; width: 40px; height: 5px; background: red;
+            transform-origin: left center; cursor: pointer;
+        }
+        .selected { background: green !important; }
+    </style>
+</head>
+<body>
+
+    <h2>파노라마 2D 편집</h2>
+    <button onclick="saveData()">JSON 저장</button>
+    <div id="editor-container"></div>
+    
+    <a href="{% url 'project-file-upload'  project.id %}" class="btn-secondary">돌아가기</a>
+
+    <script>
+        let selectedPanorama = null;
+        let links = [];  // 연결 정보
+        let date = "{{date}}";
+        let floor = "{{floor}}";
+        let projectId = "{{project.id}}";
+        var panoramas = [
+        {% for panorama in panoramas %}
+            {
+                "position_x": {{ panorama.position_x }},
+                "position_y": {{ panorama.position_y }},
+                "position_z": {{ panorama.position_z }},
+                "front_x": {{ panorama.front_x }},
+                "front_y": {{ panorama.front_y }},
+                "front_z": {{ panorama.front_z }}
+            }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+        ];
+
+        async function drawPanoramas() {
+            const container = document.getElementById("editor-container");
+            container.innerHTML = "";
+            panoramas.forEach(p => {
+                // 원 (파노라마 위치)
+                const point = document.createElement("div");
+                point.classList.add("panorama-point");
+                point.style.left = `${p.position_x}px`;
+                point.style.top = `${p.position_y}px`;
+                point.dataset.id = p.id;
+                container.appendChild(point);
+                console.log(p.position_x, p.position_y)
+
+                // 화살표 (방향 표시)
+                const arrow = document.createElement("div");
+                arrow.classList.add("panorama-arrow");
+                arrow.style.left = `${p.front_x + 10}px`;
+                arrow.style.top = `${p.front_y + 7}px`;
+                container.appendChild(arrow);
+
+                // 드래그 이벤트 추가
+                point.addEventListener("mousedown", (e) => startDrag(e, point));
+                arrow.addEventListener("mousedown", (e) => startRotate(e, arrow));
+                
+                // 선택 이벤트 추가
+                point.addEventListener("click", () => toggleSelect(point));
+            });
+        }
+
+        function startDrag(e, element) {
+            e.preventDefault();
+            const offsetX = e.clientX - element.offsetLeft;
+            const offsetY = e.clientY - element.offsetTop;
+
+            function onMouseMove(e) {
+                element.style.left = `${e.clientX - offsetX}px`;
+                element.style.top = `${e.clientY - offsetY}px`;
+            }
+
+            function onMouseUp() {
+                document.removeEventListener("mousemove", onMouseMove);
+                document.removeEventListener("mouseup", onMouseUp);
+            }
+
+            document.addEventListener("mousemove", onMouseMove);
+            document.addEventListener("mouseup", onMouseUp);
+        }
+
+        function startRotate(e, element) {
+            e.preventDefault();
+            const centerX = parseFloat(element.style.left) + 10;
+            const centerY = parseFloat(element.style.top) + 7;
+
+            function onMouseMove(e) {
+                const angle = Math.atan2(e.clientY - centerY, e.clientX - centerX);
+                element.style.transform = `rotate(${angle}rad)`;
+            }
+
+            function onMouseUp() {
+                document.removeEventListener("mousemove", onMouseMove);
+                document.removeEventListener("mouseup", onMouseUp);
+            }
+
+            document.addEventListener("mousemove", onMouseMove);
+            document.addEventListener("mouseup", onMouseUp);
+        }
+
+        function toggleSelect(point) {
+            const id = point.dataset.id;
+            const isSelected = point.classList.contains("selected");
+
+            if (isSelected) {
+                point.classList.remove("selected");
+                links = links.filter(l => l !== id);
+            } else {
+                point.classList.add("selected");
+                if (selectedPanorama && selectedPanorama !== id) {
+                    links.push({ from_id: selectedPanorama, to_id: id });
+                    selectedPanorama = null;
+                } else {
+                    selectedPanorama = id;
+                }
+            }
+        }
+
+        async function saveData() {
+            for (const p of panoramas) {
+                const point = document.querySelector(`.panorama-point[data-id="${p.id}"]`);
+                const arrow = document.querySelector(".panorama-arrow");
+
+                if (point) {
+                    p.position_x = parseInt(point.style.left);
+                    p.position_y = parseInt(point.style.top);
+                }
+
+                if (arrow) {
+                    const angle = parseFloat(arrow.style.transform.replace("rotate(", "").replace("rad)", ""));
+                    p.rotation = angle;
+                }
+
+                await fetch(`/api/panoramas/update/`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(p)
+                });
+            }
+
+            for (const link of links) {
+                await fetch(`/api/links/update/`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(link)
+                });
+            }
+
+            alert("데이터 저장 완료!");
+        }
+
+        drawPanoramas();
+    </script>
+
+</body>
+</html>

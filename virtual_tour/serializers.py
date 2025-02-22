@@ -1,7 +1,7 @@
 from rest_framework import serializers
-from .models import Panorama
+from .models import VirtualTour
 
 class PanoramaSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Panorama
-        fields = ["id", "project", "name", "image", "created_at"]
+        model = VirtualTour
+        fields = ["owner", "project", "settings", "created_at"]
