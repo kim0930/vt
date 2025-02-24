@@ -13,7 +13,7 @@
             cursor: grab; display: flex; justify-content: center; align-items: center;
         }
         .panorama-arrow {
-            position: absolute; width: 40px; height: 5px; background: red;
+            position: absolute; width: 40px; height: 2px; background: red;
             transform-origin: left center; cursor: pointer;
         }
         .selected { background: green !important; }
@@ -53,21 +53,21 @@
                 // 원 (파노라마 위치)
                 const point = document.createElement("div");
                 point.classList.add("panorama-point");
-                point.style.left = `${p.position_x}px`;
-                point.style.top = `${p.position_y}px`;
+                point.style.left = `${p.position_x - point.offsetWidth/2}px`;
+                point.style.top = `${p.position_y - point.offsetHeight/2}px`;
                 point.dataset.id = p.id;
                 container.appendChild(point);
-                console.log(p.position_x, p.position_y)
 
                 // 화살표 (방향 표시)
                 const arrow = document.createElement("div");
                 arrow.classList.add("panorama-arrow");
-                arrow.style.left = `${p.front_x + 10}px`;
-                arrow.style.top = `${p.front_y + 7}px`;
+                arrow.style.left = `${p.position_x + point.offsetWidth/2}px`;
+                arrow.style.top = `${p.position_y + point.offsetHeight/2}px`;
                 container.appendChild(arrow);
 
+
                 // 드래그 이벤트 추가
-                point.addEventListener("mousedown", (e) => startDrag(e, point));
+                point.addEventListener("mousedown", (e) => startDrag(e, point, arrow));
                 arrow.addEventListener("mousedown", (e) => startRotate(e, arrow));
                 
                 // 선택 이벤트 추가
@@ -75,14 +75,16 @@
             });
         }
 
-        function startDrag(e, element) {
+        function startDrag(e, element1, element2) {
             e.preventDefault();
-            const offsetX = e.clientX - element.offsetLeft;
-            const offsetY = e.clientY - element.offsetTop;
+            const offsetX = e.clientX - element1.offsetLeft;
+            const offsetY = e.clientY - element1.offsetTop;
 
             function onMouseMove(e) {
-                element.style.left = `${e.clientX - offsetX}px`;
-                element.style.top = `${e.clientY - offsetY}px`;
+                element1.style.left = `${e.clientX - offsetX}px`;
+                element1.style.top = `${e.clientY   - offsetY}px`;
+                element2.style.left = `${e.clientX + element1.offsetWidth/2 - offsetX}px`;
+                element2.style.top = `${e.clientY + element1.offsetHeight/2- offsetY}px`;
             }
 
             function onMouseUp() {

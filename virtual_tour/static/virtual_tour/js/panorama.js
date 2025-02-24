@@ -466,8 +466,8 @@ function initEventListener() {
 			mapContainer.style.width = map_width+"px";
 			toggleMap.innerText = "−"; // 축소 버튼
 		} else {
-			mapContainer.style.height = "30px"; // 최소화 (제목 정도만 보이게)
-			mapContainer.style.width = "150px";
+			mapContainer.style.height = "0px"; // 최소화 (제목 정도만 보이게)
+			mapContainer.style.width = "0px";
 			toggleMap.innerText = "+"; // 확장 버튼
 		}
 		isMapMinimized = !isMapMinimized;
