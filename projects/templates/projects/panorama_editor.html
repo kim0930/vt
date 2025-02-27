@@ -65,7 +65,6 @@
                 arrow.style.top = `${p.position_y + point.offsetHeight/2}px`;
                 container.appendChild(arrow);
 
-
                 // 드래그 이벤트 추가
                 point.addEventListener("mousedown", (e) => startDrag(e, point, arrow));
                 arrow.addEventListener("mousedown", (e) => startRotate(e, arrow));

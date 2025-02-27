@@ -2,7 +2,7 @@ import zipfile
 import os
 from datetime import datetime
 import shutil
-
+import re
 from rest_framework import generics, permissions
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
@@ -18,8 +18,11 @@ from .serializers import ProjectSerializer
 
 from .forms import ProjectForm 
 from .forms import ZipFileUploadForm    # 다중 파일 업로드 폼 추가
+from .forms import ZipFileUploadForm_map    # 다중 파일 업로드 폼 추가
+
 from .forms import MultipleFileUploadForm    # 다중 파일 업로드 폼 추가
 from django.http import JsonResponse
+
 
 @login_required
 def project_list(request):
@@ -77,84 +80,146 @@ def zip_file_upload(request, project_id):
         else:  # 지상층인 경우
             return int(floor[:-1])  # 3F → 3, 1F → 1
         
+    # 층 이름을 기준으로 숫자를 추출하는 함수
+    def extract_floor_number(floor_name):
+        # B1F -> -1, B2F -> -2, 1F -> 1, 2F -> 2 등의 방식으로 숫자 추출
+        if 'B' in floor_name:  # 지하층의 경우
+            return -int(re.search(r'\d+', floor_name).group())  # 음수로 처리
+        else:  # 지상층의 경우
+            return int(re.search(r'\d+', floor_name).group())
+        
+    def generate_floors(floors_min, floors_max):
+        floor_list = []
+        
+        # 지하층 (음수)
+        for i in range(floors_min, 0):
+            floor_list.append(f'B{-i}F')
+        
+        # 지상층 (양수)
+        for i in range(1, floors_max + 1):
+            floor_list.append(f'{i}F')
+        
+        # 높은 층부터 낮은 층 순으로 정렬 (지하층은 음수로, 지상층은 양수로 정렬)
+        floor_list.sort(key=lambda x: (int(re.search(r'\d+', x).group()) if 'B' not in x else -int(re.search(r'\d+', x).group())), reverse=True)
+        
+        return floor_list
+        
     """ZIP 파일을 업로드하고 압축을 해제하여 저장"""
     project = get_object_or_404(Project, id=project_id, owner=request.user)
 
     if request.method == "POST":
-        form = ZipFileUploadForm(request.POST, request.FILES)
-        if form.is_valid():
-            zip_file = request.FILES["zip_file"]  # ✅ ZIP 파일 가져오기
+        form_type = request.POST['form_type']
+        
+        # 현장 촬영이미지 업로드용
+        if form_type == 'main':
+            form = ZipFileUploadForm(request.POST, request.FILES)
+            if form.is_valid():
+                zip_file = request.FILES["zip_file"]  # ✅ ZIP 파일 가져오기
 
-            # ✅ 프로젝트 ID 폴더 내에 압축 파일명과 동일한 폴더 생성
-            zip_name = os.path.splitext(zip_file.name)[0]  # ZIP 파일명 (확장자 제거)
-            upload_root = os.path.join(settings.MEDIA_ROOT, "projects", str(project.id), "origin")
-            os.makedirs(upload_root, exist_ok=True)  # 폴더 생성
+                # ✅ 프로젝트 ID 폴더 내에 압축 파일명과 동일한 폴더 생성
+                zip_name = os.path.splitext(zip_file.name)[0]  # ZIP 파일명 (확장자 제거)
+                upload_root = os.path.join(settings.MEDIA_ROOT, "projects", str(project.id), "origin")
+                os.makedirs(upload_root, exist_ok=True)  # 폴더 생성
 
-            # ✅ ZIP 파일을 저장 후 압축 해제
-            zip_path = os.path.join(upload_root, zip_file.name)
-            with open(zip_path, "wb") as f:
-                for chunk in zip_file.chunks():
-                    f.write(chunk)
-            
-            extracted_images = []  # ✅ DB에 저장할 이미지 목록
-            with zipfile.ZipFile(zip_path, "r") as zip_ref:
-                zip_ref.extractall(upload_root)  # 압축 해제
+                # ✅ ZIP 파일을 저장 후 압축 해제
+                zip_path = os.path.join(upload_root, zip_file.name)
+                with open(zip_path, "wb") as f:
+                    for chunk in zip_file.chunks():
+                        f.write(chunk)
+                
+                extracted_images = []  # ✅ DB에 저장할 이미지 목록
+                with zipfile.ZipFile(zip_path, "r") as zip_ref:
+                    zip_ref.extractall(upload_root)  # 압축 해제
 
-                for file_name in zip_ref.namelist():
-                    file_path = os.path.join(upload_root, file_name)
+                    for file_name in zip_ref.namelist():
+                        file_path = os.path.join(upload_root, file_name)
 
-                    # ✅ 파일이 {date}/{floor}/*.jpg 구조인지 확인
-                    path_parts = file_name.split("/")
-                    # print(path_parts, upload_root,zip_ref.namelist())
-                    if len(path_parts) == 3:
-                        date_folder = path_parts[0]  # ✅ 날짜 폴더 (YYYY-MM-DD)
-                        floor_folder = path_parts[1]  # ✅ 층 폴더 (1F, B1F 등)
-                        image_name = path_parts[2]  # ✅ 이미지 파일명
+                        # ✅ 파일이 {date}/{floor}/*.jpg 구조인지 확인
+                        path_parts = file_name.split("/")
+                        # print(path_parts, upload_root,zip_ref.namelist())
+                        if len(path_parts) == 3:
+                            date_folder = path_parts[0]  # ✅ 날짜 폴더 (YYYY-MM-DD)
+                            floor_folder = path_parts[1]  # ✅ 층 폴더 (1F, B1F 등)
+                            image_name = path_parts[2]  # ✅ 이미지 파일명
 
-                        if image_name.lower().endswith((".jpg", ".jpeg", ".png")):
-                            relative_path = os.path.join("projects", str(project.id), "origin", file_name)
+                            if image_name.lower().endswith((".jpg", ".jpeg", ".png")):
+                                relative_path = os.path.join("projects", str(project.id), "origin", file_name)
 
-                            # ✅ PanoramaImage 모델에 저장
-                            PanoramaImage.objects.create(
-                                project=project,
-                                image=relative_path,  # Django ImageField 경로 저장
-                                date=date_folder,
-                                floor=floor_folder,
-                                sfm='none',
-                                vt='none',
-                            )
-            
-            
-            os.remove(zip_path)  # ✅ 원본 ZIP 파일 삭제
+                                # ✅ PanoramaImage 모델에 저장
+                                PanoramaImage.objects.create(
+                                    project=project,
+                                    image=relative_path,  # Django ImageField 경로 저장
+                                    date=date_folder,
+                                    floor=floor_folder,
+                                    sfm='none',
+                                    vt='none',
+                                )
+                
+                os.remove(zip_path)  # ✅ 원본 ZIP 파일 삭제
 
-            return redirect("project-file-upload", project_id=project.id)
+                return redirect("project-file-upload", project_id=project.id)
+        
+        # 층별 도면 업로드용
+        elif form_type == 'map':
+            form1 = ZipFileUploadForm_map(request.POST, request.FILES)
+            if form1.is_valid():
+                zip_file = request.FILES["zip_file"]  # ✅ ZIP 파일 가져오기
+
+                # ✅ 프로젝트 ID 폴더 내에 압축 파일명과 동일한 폴더 생성
+                zip_name = os.path.splitext(zip_file.name)[0]  # ZIP 파일명 (확장자 제거)
+                upload_root = os.path.join(settings.MEDIA_ROOT, "projects", str(project.id), "map")
+                os.makedirs(upload_root, exist_ok=True)  # 폴더 생성
+
+                # ✅ ZIP 파일을 저장 후 압축 해제
+                zip_path = os.path.join(upload_root, zip_file.name)
+                with open(zip_path, "wb") as f:
+                    for chunk in zip_file.chunks():
+                        f.write(chunk)
+                
+                with zipfile.ZipFile(zip_path, "r") as zip_ref:
+                    zip_ref.extractall(upload_root)  # 압축 해제
+
+                    for file_name in zip_ref.namelist():
+                        file_path = os.path.join(upload_root, file_name)
+                        
+                        # ✅ 파일이 {date}/{floor}/*.jpg 구조인지 확인
+                        path_parts = file_name.split("/")
+                        # print(path_parts, upload_root,zip_ref.namelist())
+                        if len(path_parts) == 1:
+                            map_image_name = path_parts[-1]  # ✅ 맵 이름 (B1F, 1F, 2F)
+                            if map_image_name.lower().endswith((".jpg", ".jpeg", ".png")):
+                                relative_path = os.path.join("projects", str(project.id), "map", file_name)
+                                print(relative_path)
+                
+                os.remove(zip_path)  # ✅ 원본 ZIP 파일 삭제
+
+                return redirect("project-file-upload", project_id=project.id)
 
     else:
         form = ZipFileUploadForm()
+        form1 = ZipFileUploadForm_map()
         
-    # ✅ 업로드된 폴더 목록 가져오기
+    # ✅ 업로드된 현장 촬영이미지 폴더 목록 가져오기
     project_root = os.path.join(settings.MEDIA_ROOT, "projects", str(project.id), "origin")
-
-    date_folders  = []
-    floor_folders = []
-    folder_structure = {}
+    date_folders_imgs  = []
+    floor_folders_imgs = []
+    folder_structure_imgs = {}
     if os.path.exists(project_root):
         all_folders_files  = sorted(os.listdir(project_root))  # 최상위 폴더 목록 가져오기
-        date_folders = [x for x in all_folders_files if os.path.isdir(os.path.join(project_root,x))]
-        for date in date_folders :
+        date_folders_imgs = [x for x in all_folders_files if os.path.isdir(os.path.join(project_root,x))]
+        for date in date_folders_imgs :
             folder_path = os.path.join(project_root, date)
             if os.path.isdir(folder_path):  # 폴더인 경우만 처리
-                folder_structure[date] = sorted(os.listdir(folder_path))  # 내부 폴더 가져오기
-        all_floors = [item for sublist in folder_structure.values() for item in sublist]
-        floor_folders = list(set(all_floors))
+                folder_structure_imgs[date] = sorted(os.listdir(folder_path))  # 내부 폴더 가져오기
+        all_floors = [item for sublist in folder_structure_imgs.values() for item in sublist]
+        floor_folders_imgs = list(set(all_floors))
 
     # 정렬
-    floor_folders = sorted(floor_folders, key=floor_key)
+    floor_folders_imgs = sorted(floor_folders_imgs, key=floor_key)
     
     
     # ✅ sfm 완료된 폴더 목록 가져오기
     project_root = os.path.join(settings.MEDIA_ROOT, "projects", str(project.id), "sfm")
-
     date_folders_sfm  = []
     floor_folders_sfm = []
     folder_structure_sfm = {}
@@ -171,17 +236,63 @@ def zip_file_upload(request, project_id):
     # 정렬
     floor_folders_sfm = sorted(floor_folders_sfm, key=floor_key)
     
+    
+    # ✅ 업로드된 층별 도면 이미지 목록 가져오기
+    project_root = os.path.join(settings.MEDIA_ROOT, "projects", str(project.id), "map")
+    floor_imgs = {}
+    floor_folders_map_imgs = []
+    if os.path.exists(project_root):
+        floor_imgs_tmp  = os.listdir(project_root)  # 최상위 폴더 목록 가져오기
+        floor_folders_map_imgs  = [x.split(".")[0] for x in floor_imgs_tmp]  # 최상위 폴더 목록 가져오기
+        
+        # !!!!!!!!!!!!!!!!!!!! 나중에 여기 경로받아오는 법 수정필요함 !!!!!!!!!!!!!!!!!!!!!!
+        # !!!!!!!!!!!!!!!!!!!! 나중에 여기 경로받아오는 법 수정필요함 !!!!!!!!!!!!!!!!!!!!!!
+        # floor_imgs = {x.split(".")[0]: os.path.join(project_root.split("vt")[-1],x) for x in floor_imgs_tmp}
+        floor_imgs = {x.split(".")[0]: os.path.join(settings.MEDIA_URL, "projects", str(project.id), "map",x) for x in floor_imgs_tmp}
+        # !!!!!!!!!!!!!!!!!!!! 나중에 여기 경로받아오는 법 수정필요함 !!!!!!!!!!!!!!!!!!!!!!
+        # !!!!!!!!!!!!!!!!!!!! 나중에 여기 경로받아오는 법 수정필요함 !!!!!!!!!!!!!!!!!!!!!!
+        # !!!!!!!!!!!!!!!!!!!! 나중에 여기 경로받아오는 법 수정필요함 !!!!!!!!!!!!!!!!!!!!!!
+
+        floor_imgs = dict(sorted(floor_imgs.items(), key=lambda item: extract_floor_number(item[0])))
+        print(floor_imgs)    
+    
+    # 전체 층 리스트 (DB값에서 정보얻어서 생성)
+    floor_folders = generate_floors(project.floors_min, project.floors_max)
+    sfm_status  = {}
+    for floor in floor_folders:
+        sfm_status[floor]  = {}
+        for date in date_folders_imgs:
+            if floor in folder_structure_imgs[date]:
+                if date in folder_structure_sfm and floor in folder_structure_sfm[date]:
+                    sfm_status[floor][date] = "edit"
+                else:
+                    sfm_status[floor][date] = "excute"
+    print(sfm_status)
+                
+
+    
     return render(request, "projects/project_file_upload.html", {
         "project": project,
+        
         "form": form,
         
-        "date_folders": date_folders,  # ✅ 최상위 폴더 이름
-        "floor_folders": floor_folders,  # ✅ 최상위 폴더 이름
-        "folder_structure": folder_structure,  # ✅ 내부 폴더 포함
+        "date_folders_imgs": date_folders_imgs,  # ✅ 최상위 폴더 이름
+        "floor_folders_imgs": floor_folders_imgs,  # ✅ 최상위 폴더 이름
+        "folder_structure_imgs": folder_structure_imgs,  # ✅ 내부 폴더 포함
         
         "date_folders_sfm": date_folders_sfm,  # ✅ sfm 최상위 폴더 이름
         "floor_folders_sfm": floor_folders_sfm,  # ✅ sfm 최상위 폴더 이름
         "folder_structure_sfm": folder_structure_sfm,  # ✅ sfm 내부 폴더 포함
+        
+        "floor_folders": floor_folders,
+        
+        "form1": form1,  
+           
+        "floor_imgs": floor_imgs,
+        "floor_folders_map_imgs": floor_folders_map_imgs,
+        
+        "sfm_status": sfm_status,
+
     })
         
 @login_required
@@ -289,6 +400,12 @@ def sfm_execute(request, project_id):
     project_root = os.path.join(settings.MEDIA_ROOT, "projects", str(project.id), "sfm")
     os.makedirs(os.path.join(project_root, date, floor),  exist_ok=True)
     
+    # ✅ 여기에 SFM 실행 로직 추가
+    # ✅ 여기에 SFM 실행 로직 추가
+    # ✅ 여기에 SFM 실행 로직 추가
+    # ✅ 여기에 SFM 실행 로직 추가
+    # ✅ 여기에 SFM 실행 로직 추가
+
     # # 결과물(예상)
     sfm_imgs = ['projects/2f6a7291-ac01-4268-a1e2-6786a2e42164/origin/2025-01-20/1F/201_6_B.jpg', 'projects/2f6a7291-ac01-4268-a1e2-6786a2e42164/origin/2025-01-20/1F/201_6_F.jpg']
     

@@ -1,25 +1,75 @@
 {% extends "base.html" %}
 
 {% block content %}
+
+<style>
+    /* 작은 이미지 미리보기 스타일 */
+    .thumbnail {
+        width: 25px;
+        cursor: pointer;
+        margin: 0px;
+    }
+
+    /* 팝업 모달 스타일 */
+    .modal {
+        display: none; /* 처음에는 숨겨져 있음 */
+        position: fixed;
+        z-index: 1; /* 화면 위쪽에 위치 */
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7); /* 반투명 배경 */
+        overflow: auto; /* 스크롤 가능 */
+        padding-top: 50px;
+    }
+
+    /* 팝업 내용 스타일 */
+    .modal-content {
+        margin: auto;
+        display: block;
+        width: 80%;
+        max-width: 700px;
+    }
+
+    /* 닫기 버튼 스타일 */
+    .close {
+        color: #aaa;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+    }
+
+    .close:hover,
+    .close:focus {
+        color: black;
+        text-decoration: none;
+        cursor: pointer;
+    }
+</style>
+
 <h2>📂 프로젝트 파일 업로드</h2>
 
 <!-- ✅ 업로드 폴더 테이블 -->
-<h3>📁 업로드된 폴더 목록</h3>
+<h3>✅ 현재 업로드된 현장촬영 이미지</h3>
 
-{% if date_folders %}
+{% if date_folders_imgs %}
 <form id="delete-form">
     <table border="1">
         <thead>
             <tr>
                 <th></th>
-                {% for date in date_folders %}
+                <th></th>
+
+                {% for date in date_folders_imgs %}
                 <th>Delete<input type="checkbox" class="column-checkbox" value="{{ date }}"></th>
                 {% endfor %}
             </tr>
 
             <tr>
                 <th>층</th>
-                {% for date in date_folders %}
+                <th>도면</th>
+                {% for date in date_folders_imgs %}
                 <th>{{ date }}</th>
                 {% endfor %}
             </tr>
@@ -28,34 +78,49 @@
             {% for floor in floor_folders  %}
             <tr>
                 <td>{{ floor }}</td>
-                {% for date, folders in folder_structure.items %}
-                <td>
-                    {% if floor in folders %}
-                        {% if date in date_folders_sfm and floor in floor_folders_sfm %}
-                            <!-- ✅ SFM 편집 버튼 -->
-                            <form method="post" action="{% url 'panorama-editor' project.id%}">
-                                {% csrf_token %}
-                                <input type="hidden" name="date" value="{{ date }}">
-                                <input type="hidden" name="floor" value="{{ floor }}">
-                                <button type="submit" id="edit_sfm" value="{{ date }}-{{ floor }}">✏️ Edit </button>
-                            </form>
-                        {% else %}
-                            <!-- ✅ SFM 실행 버튼 -->
-                            <form method="post" action="{% url 'sfm-execute' project.id%}">
-                                {% csrf_token %}
-                                <input type="hidden" name="date" value="{{ date }}">
-                                <input type="hidden" name="floor" value="{{ floor }}">
-                                <button type="submit" id="run_sfm" value="{{ date }}-{{ floor }}">🎥 SfM </button>
-                            </form>
 
+                <!-- ✅ 층별 도면 이미지 -->
+                <td>
+                {% if floor in floor_folders_map_imgs %}
+                    {% for flr, url in floor_imgs.items %}
+                        {% if floor == flr %}
+                        <img src= {{url}}  class="thumbnail" onclick="openModal(this)">
                         {% endif %}
-                    {% else %}
-                        
-                    {% endif %}
+                    {% endfor %}
+                {% endif %}
+                </td>
+
+                {% for date in date_folders_imgs %}
+                <td>
+                    {% for floor_status, date_status_dict in sfm_status.items %}
+                        {% for date_status, excuteoredit in date_status_dict.items %}
+                            {% if floor == floor_status and date == date_status %}
+                                {% if excuteoredit == 'edit' %}                           
+                                    <!-- ✅ SFM 편집 버튼 -->
+                                    <form method="post" action="{% url 'panorama-editor' project.id %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="date" value="{{ date }}">
+                                        <input type="hidden" name="floor" value="{{ floor }}">
+                                        <button type="submit" class="edit-sfm-btn" value="{{ date }}-{{ floor }}">✏️ Edit </button>
+                                    </form>
+                                {% elif excuteoredit == 'excute' %}                           
+                                    <!-- ✅ SFM 실행 버튼 (SFM 편집 버튼이 없을 경우) -->
+                                    <form method="post" action="{% url 'sfm-execute' project.id %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="date" value="{{ date }}">
+                                        <input type="hidden" name="floor" value="{{ floor }}">
+                                        <button type="submit" class="run-sfm-btn" value="{{ date }}-{{ floor }}">🎥 SfM </button>
+                                    </form>
+                                {% endif %}
+                            {% endif %}
+                        {% endfor %}
+                    {% endfor %}
                 </td>
                 {% endfor %}
+
             </tr>
             {% endfor %}
+
         </tbody>
     </table>
 
@@ -65,46 +130,79 @@
 업로드된 폴더 없음
 {% endif %}
 
-<h2>ZIP 파일 업로드</h2>
+
+<!-- 팝업 모달 -->
+<div id="myModal" class="modal">
+    <span class="close" onclick="closeModal()">&times;</span>
+    <img class="modal-content" id="modalImage">
+</div>
+
+
+<h3>⬆️ 현장 촬영이미지 업로드(ZIP)</h3>
 
 <form method="post" enctype="multipart/form-data">
+    <input type="hidden" name="form_type" value="main">
     {% csrf_token %}
     {{ form.as_p }}
     <button type="submit" class="btn btn-primary">업로드</button>
+</form>
+
+<h3>⬆️ 층별 평면도 업로드(ZIP)</h3>
+<form method="post" enctype="multipart/form-data">
+    <input type="hidden" name="form_type" value="map">
+    {% csrf_token %}
+    {{ form1.as_p }}
+    <button type="submit" class="btn btn-primary2">업로드</button>
 </form>
 
 <a href="{% url 'project-list' %}" class="btn btn-secondary">돌아가기</a>
 
 
 <script>
-document.getElementById("delete-selected").addEventListener("click", function() {
-    let selectedFolders = [];
-    document.querySelectorAll(".column-checkbox:checked").forEach(checkbox => {
-        selectedFolders.push(checkbox.value);
+    document.getElementById("delete-selected").addEventListener("click", function() {
+        let selectedFolders = [];
+        document.querySelectorAll(".column-checkbox:checked").forEach(checkbox => {
+            selectedFolders.push(checkbox.value);
+        });
+
+        if (selectedFolders.length === 0) {
+            alert("삭제할 폴더를 선택하세요.");
+            return;
+        }
+
+        fetch("{% url 'delete-selected-folders' project.id %}", {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": "{{ csrf_token }}",
+                "Content-Type": "application/x-www-form-urlencoded"
+            },
+            body: new URLSearchParams({ "folders[]": selectedFolders })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.deleted) {
+                alert("삭제 완료: " + data.deleted.join(", "));
+                location.reload();
+            }
+        })
+        .catch(error => console.error("Error:", error));
     });
 
-    if (selectedFolders.length === 0) {
-        alert("삭제할 폴더를 선택하세요.");
-        return;
+    // 모달 열기 함수
+    function openModal(element) {
+        var modal = document.getElementById("myModal");
+        var modalImage = document.getElementById("modalImage");
+        
+        // 모달에 이미지 설정
+        modal.style.display = "block";
+        modalImage.src = element.src;
     }
 
-    fetch("{% url 'delete-selected-folders' project.id %}", {
-        method: "POST",
-        headers: {
-            "X-CSRFToken": "{{ csrf_token }}",
-            "Content-Type": "application/x-www-form-urlencoded"
-        },
-        body: new URLSearchParams({ "folders[]": selectedFolders })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.deleted) {
-            alert("삭제 완료: " + data.deleted.join(", "));
-            location.reload();
-        }
-    })
-    .catch(error => console.error("Error:", error));
-});
+    // 모달 닫기 함수
+    function closeModal() {
+        var modal = document.getElementById("myModal");
+        modal.style.display = "none";
+    }
 </script>
     
 {% endblock %}

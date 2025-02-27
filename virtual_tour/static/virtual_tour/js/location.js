@@ -70,21 +70,22 @@ class Location extends THREE.Mesh {
                     // mapCamera setting
                     var viewPort = document.createElement("button");
                     viewPort.id = "mapCamera";
-                    viewPort.style.left = (spot.mapPosX - 5) + "px";
-                    viewPort.style.top = (spot.mapPosY+7.5) + "px";
-                    viewPort.dataset.originalX =  (spot.mapPosX - 5) / 300; // 300px 기준 상대 좌표 저장
-                    viewPort.dataset.originalY = (spot.mapPosY + 7.5)/ 200; // 200px 기준 상대 좌표 저장
+                    viewPort.style.left = (spot.mapPosX  - 12.5) + "px";
+                    viewPort.style.top = (spot.mapPosY ) + "px";
+                    viewPort.dataset.originalX =  (spot.mapPosX - 12.5) / 300; // 300px 기준 상대 좌표 저장
+                    viewPort.dataset.originalY = (spot.mapPosY)/ 200; // 200px 기준 상대 좌표 저장
     
                     map.appendChild(viewPort)
                 } else {
                     spotButton.id = "mapSpot";
                 }
+                spotButton.dataset.originalX = (spot.mapPosX - 15/2) / 300; // 300px 기준 상대 좌표 저장
+                spotButton.dataset.originalY = (spot.mapPosY - 15/2)/ 200; // 200px 기준 상대 좌표 저장
 
-                spotButton.dataset.originalX = (spot.mapPosX - spotButton.style.width/2) / 300; // 300px 기준 상대 좌표 저장
-                spotButton.dataset.originalY = (spot.mapPosY - spotButton.style.height/2)/ 200; // 200px 기준 상대 좌표 저장
+                spotButton.style.left = (spot.mapPosX - 15/2) + "px";
+                spotButton.style.top = (spot.mapPosY  - 15/2) + "px";
+                console.log(spotButton.offsetWidth, spotButton.offsetHeight)
 
-                spotButton.style.left = (spot.mapPosX - spotButton.style.width/2) + "px";
-                spotButton.style.top = (spot.mapPosY  - spotButton.style.height/2) + "px";
                 // spotButton.style.left = (spot.mapPosX) + "px";
                 // spotButton.style.top = (spot.mapPosY) + "px";
                 spotButton.addEventListener('mousedown', function (event) {

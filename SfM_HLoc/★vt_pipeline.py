@@ -81,7 +81,7 @@ for filename in os.listdir(input_imgs):
         os.remove(file_path)
         print(f"Deleted: {file_path}")
                 
-model = recon(input_imgs, output_path, retrieval_type='netvlad', feature_type='superpoint_inloc', match_type='superglue')
+model = 459(input_imgs, output_path, retrieval_type='netvlad', feature_type='superpoint_inloc', match_type='superglue')
 
 
 '''

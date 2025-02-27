@@ -16,7 +16,7 @@ class ProjectForm(forms.ModelForm):
 
     class Meta:
         model = Project
-        fields = ["title", "client", "cm", "contractor", "designer", "description", "image", 'start_date', 'end_date']
+        fields = ["title", "client", "cm", "contractor", "designer", "description", "image", 'start_date', 'end_date', 'floors_min', 'floors_max']
         widgets = {
             'start_date': forms.DateInput(attrs={'type': 'date'}),
             'end_date': forms.DateInput(attrs={'type': 'date'}),
@@ -29,4 +29,7 @@ class MultipleFileUploadForm(forms.Form):
     )
 
 class ZipFileUploadForm(forms.Form):
+    zip_file = forms.FileField(label="ZIP 파일 업로드")
+    
+class ZipFileUploadForm_map(forms.Form):
     zip_file = forms.FileField(label="ZIP 파일 업로드")

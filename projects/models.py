@@ -26,9 +26,19 @@ class Project(models.Model):
     image = models.ImageField(upload_to=project_image_upload_path, blank=True, null=True)  # ✅ 대표 이미지 필드 추가
     start_date = models.DateField("공사 시작일")
     end_date = models.DateField("공사 종료일")
+    floors_min = models.SmallIntegerField()
+    floors_max = models.SmallIntegerField()
+
     def __str__(self):
         return f"{self.title} ({self.id})"  # 프로젝트명과 고유 ID 함께 표시
     
+    def clean(self):
+    # floors_min이 floors_max보다 클 경우 ValidationError 발생
+        if self.floors_min > self.floors_max:
+            raise ValidationError({
+                '최저층': 'The minimum floor must be less than or equal to the maximum floor.',
+                '최고층': 'The maximum floor must be greater than or equal to the minimum floor.'
+            })
     def save(self, *args, **kwargs):
             """이미지 업로드 시 해상도를 낮춰서 저장"""
             super().save(*args, **kwargs)  # 먼저 기본 저장 수행
@@ -66,6 +76,7 @@ class PanoramaImage(models.Model):
 
     sfm =  models.CharField(max_length=10)
     vt =  models.CharField(max_length=10)
+    
     def __str__(self):
         return f"{self.project} - {self.date} - {self.floor} - {self.image.name}"
     
