@@ -37,9 +37,18 @@ LocationLoader.prototype.loadLocation = function (uid, onLoadComplete) {
             function (texture) {
                 location = new Location(texture);
 
+                // 기본 정보 설정
                 location.cameraTargets = item.cameraTargets;
                 location.uid = item.uid;
                 location.mapUid = item.mapUid;
+                
+                // depthMap 정보 설정
+                if (item.depthMap) {
+                    location.depthMap = {};
+                    location.depthMap.default = datesJsonUrl + item.depthMap.default;
+                    location.depthMap.hq = datesJsonUrl + item.depthMap.hq;
+                    location.depthMap.mobile = datesJsonUrl + item.depthMap.mobile;
+                }
 
                 //Hotspots
                 item.hotspots.forEach(function (hotspot) {

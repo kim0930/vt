@@ -14,6 +14,8 @@ from django.conf import settings
 
 from .models import Project
 from .models import PanoramaImage
+from .models import FloorPlanImage
+
 from .serializers import ProjectSerializer
 
 from .forms import ProjectForm 
@@ -164,7 +166,13 @@ def zip_file_upload(request, project_id):
             form1 = ZipFileUploadForm_map(request.POST, request.FILES)
             if form1.is_valid():
                 zip_file = request.FILES["zip_file"]  # ✅ ZIP 파일 가져오기
-
+                
+                floor_plans = FloorPlanImage.objects.filter(project=project)  # 해당 프로젝트의 FloorPlanImage 데이터 조회
+                floor_plans.delete()  # 조회된 FloorPlanImage 데이터 삭제
+                # floor_number = '1F'  # 삭제하려는 층 정보
+                # floor_plans = FloorPlanImage.objects.filter(project=project, floor=floor_number)
+                # floor_plans.delete()
+                
                 # ✅ 프로젝트 ID 폴더 내에 압축 파일명과 동일한 폴더 생성
                 zip_name = os.path.splitext(zip_file.name)[0]  # ZIP 파일명 (확장자 제거)
                 upload_root = os.path.join(settings.MEDIA_ROOT, "projects", str(project.id), "map")
@@ -189,8 +197,14 @@ def zip_file_upload(request, project_id):
                             map_image_name = path_parts[-1]  # ✅ 맵 이름 (B1F, 1F, 2F)
                             if map_image_name.lower().endswith((".jpg", ".jpeg", ".png")):
                                 relative_path = os.path.join("projects", str(project.id), "map", file_name)
-                                print(relative_path)
-                
+                                
+                                # ✅ PanoramaImage 모델에 저장
+                                floor_plan = FloorPlanImage.objects.create(
+                                    project=project,
+                                    image=relative_path,
+                                    floor=map_image_name.split(".")[0]
+                                )
+                                project.floor_plans.add(floor_plan)
                 os.remove(zip_path)  # ✅ 원본 ZIP 파일 삭제
 
                 return redirect("project-file-upload", project_id=project.id)
@@ -238,23 +252,20 @@ def zip_file_upload(request, project_id):
     
     
     # ✅ 업로드된 층별 도면 이미지 목록 가져오기
-    project_root = os.path.join(settings.MEDIA_ROOT, "projects", str(project.id), "map")
-    floor_imgs = {}
-    floor_folders_map_imgs = []
-    if os.path.exists(project_root):
-        floor_imgs_tmp  = os.listdir(project_root)  # 최상위 폴더 목록 가져오기
-        floor_folders_map_imgs  = [x.split(".")[0] for x in floor_imgs_tmp]  # 최상위 폴더 목록 가져오기
-        
-        # !!!!!!!!!!!!!!!!!!!! 나중에 여기 경로받아오는 법 수정필요함 !!!!!!!!!!!!!!!!!!!!!!
-        # !!!!!!!!!!!!!!!!!!!! 나중에 여기 경로받아오는 법 수정필요함 !!!!!!!!!!!!!!!!!!!!!!
-        # floor_imgs = {x.split(".")[0]: os.path.join(project_root.split("vt")[-1],x) for x in floor_imgs_tmp}
-        floor_imgs = {x.split(".")[0]: os.path.join(settings.MEDIA_URL, "projects", str(project.id), "map",x) for x in floor_imgs_tmp}
-        # !!!!!!!!!!!!!!!!!!!! 나중에 여기 경로받아오는 법 수정필요함 !!!!!!!!!!!!!!!!!!!!!!
-        # !!!!!!!!!!!!!!!!!!!! 나중에 여기 경로받아오는 법 수정필요함 !!!!!!!!!!!!!!!!!!!!!!
-        # !!!!!!!!!!!!!!!!!!!! 나중에 여기 경로받아오는 법 수정필요함 !!!!!!!!!!!!!!!!!!!!!!
+    floor_plans = FloorPlanImage.objects.filter(project=project) # 해당 프로젝트의 FloorPlanImage 가져오기
+    floor_imgs = {fp.floor: fp.image.url for fp in floor_plans} # 딕셔너리 생성
+    floor_imgs = dict(sorted(floor_imgs.items(), key=lambda item: extract_floor_number(item[0])))
+    # print("FloorPlanImage", floor_imgs)    
 
-        floor_imgs = dict(sorted(floor_imgs.items(), key=lambda item: extract_floor_number(item[0])))
-        print(floor_imgs)    
+    # project_root = os.path.join(settings.MEDIA_ROOT, "projects", str(project.id), "map")
+    # floor_imgs = {}
+    # floor_folders_map_imgs = []
+    # if os.path.exists(project_root):
+    #     floor_imgs_tmp  = os.listdir(project_root)  # 최상위 폴더 목록 가져오기
+    #     floor_folders_map_imgs  = [x.split(".")[0] for x in floor_imgs_tmp]  # 최상위 폴더 목록 가져오기
+    #     floor_imgs = {x.split(".")[0]: os.path.join(settings.MEDIA_URL, "projects", str(project.id), "map",x) for x in floor_imgs_tmp}
+    #     floor_imgs = dict(sorted(floor_imgs.items(), key=lambda item: extract_floor_number(item[0])))
+    #     print("project_root", floor_imgs)    
     
     # 전체 층 리스트 (DB값에서 정보얻어서 생성)
     floor_folders = generate_floors(project.floors_min, project.floors_max)
@@ -267,15 +278,11 @@ def zip_file_upload(request, project_id):
                     sfm_status[floor][date] = "edit"
                 else:
                     sfm_status[floor][date] = "excute"
-    print(sfm_status)
-                
-
-    
+                   
     return render(request, "projects/project_file_upload.html", {
         "project": project,
         
         "form": form,
-        
         "date_folders_imgs": date_folders_imgs,  # ✅ 최상위 폴더 이름
         "floor_folders_imgs": floor_folders_imgs,  # ✅ 최상위 폴더 이름
         "folder_structure_imgs": folder_structure_imgs,  # ✅ 내부 폴더 포함
@@ -284,14 +291,11 @@ def zip_file_upload(request, project_id):
         "floor_folders_sfm": floor_folders_sfm,  # ✅ sfm 최상위 폴더 이름
         "folder_structure_sfm": folder_structure_sfm,  # ✅ sfm 내부 폴더 포함
         
-        "floor_folders": floor_folders,
-        
         "form1": form1,  
-           
         "floor_imgs": floor_imgs,
-        "floor_folders_map_imgs": floor_folders_map_imgs,
         
         "sfm_status": sfm_status,
+        "floor_folders": floor_folders,
 
     })
         
@@ -383,6 +387,7 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from .models import PanoramaImage, PanoramaLink
 from .serializers import PanoramaImageSerializer, PanoramaLinkSerializer
+from SfM.vt_pipeline import run_vt
 
 @login_required
 def sfm_execute(request, project_id):
@@ -396,13 +401,9 @@ def sfm_execute(request, project_id):
         floor = None
 
     # ✅ 여기에 SFM 실행 로직 추가
-    print(f"SFM 실행 for project {project_id}-{date}-{floor}")
-    project_root = os.path.join(settings.MEDIA_ROOT, "projects", str(project.id), "sfm")
-    os.makedirs(os.path.join(project_root, date, floor),  exist_ok=True)
-    
-    # ✅ 여기에 SFM 실행 로직 추가
-    # ✅ 여기에 SFM 실행 로직 추가
-    # ✅ 여기에 SFM 실행 로직 추가
+    print(f"**************SFM 실행 for project {project_id}-{date}-{floor}************")
+    cam_info_json, image_paris = run_vt(project_id, date, floor)
+    # project_root = os.path.join(settings.MEDIA_ROOT, "projects", str(project.id), "sfm")
     # ✅ 여기에 SFM 실행 로직 추가
     # ✅ 여기에 SFM 실행 로직 추가
 
@@ -420,7 +421,7 @@ def sfm_execute(request, project_id):
             panorama.front_x = 120
             panorama.front_y = 120
             panorama.front_z = 0
-            panorama.sfm = "true"
+            panorama.sfm = True
             panorama.save()
     
     # return render(request, "projects/panorama_editor.html", {

@@ -1,26 +1,43 @@
+
+#main-content {
+    position: absolute; /* 화면에 고정 */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden; /* 스크롤바 제거 */
+
+}
+#app-frame {
+    width: 100%;
+    height: 100%; /* 부모 요소에 맞춰 높이 설정 */
+    border: none; /* 테두리 제거 */
+}
+
 /* 🚀 하단에 고정된 아이콘 버튼 */
 .bottom-icons {
-    position: fixed;   /* 화면 하단에 고정 */
-    bottom: 50px;      /* 하단에서 20px 위로 */
-    left: 50%;         /* 가운데 정렬 */
-    transform: translateX(-50%); /* 정확히 가운데 맞추기 */
-    display: flex;     /* 버튼을 가로 정렬 */
-    gap: 15px;         /* 버튼 사이 간격 */
-    background: rgba(255, 255, 255, 0.9); /* 약간 투명한 배경 */
-    padding: 10px 20px; /* 버튼 영역 패딩 */
-    border-radius: 10px; /* 둥근 모서리 */
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2); /* 약간의 그림자 */
+    position: absolute; /* app-frame 내에서 위치 설정 */
+    bottom: 15px; /* app-frame 하단에서 20px 위로 */
+    left: 100px; /* app-frame 왼쪽에서 20% 위치 */
+    display: flex;
+    justify-content: center; /* ✅ 버튼 가운데 정렬 */
+    gap: 5px;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 5px 5px;
+    border-radius: 20px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    width: 150px; /* 고정 크기 설정 (필요에 따라 조정) */
+    transform: none; /* transform 제거 */
 }
 
 /* 버튼 스타일 */
 .bottom-icons button {
     border: none;
-    background: #007bff;
+    background: none;
     color: white;
-    padding: 10px 15px;
     border-radius: 5px;
     cursor: pointer;
-    font-size: 16px;
+    font-size: 22px;
 }
 
 /* 버튼 hover 효과 */
@@ -76,6 +93,8 @@ main {
     margin-left: 250px; /* 사이드바 너비만큼 여백 추가 */
     padding: 20px;
     transition: margin-left 0.3s ease; /* 🔹 부드러운 애니메이션 */
+    position: relative; /* 추가: main 요소에 relative 설정 */
+
 }
 
 /* 사이드바 최소화 시 메인 콘텐츠 확장 */
@@ -83,15 +102,4 @@ aside.minimized + main {
     margin-left: 50px; /* 🔹 사이드바 최소화 시 확장 */
 }
 
-/* 푸터 스타일 */
-footer {
-    width: 100%;
-    height: 50px; /* 🔹 높이를 5px로 설정 */
-    background-color: #222;
-    color: white;
-    text-align: center;
-    padding: 3px;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-}
+

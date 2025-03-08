@@ -81,7 +81,7 @@
 
                 <!-- ✅ 층별 도면 이미지 -->
                 <td>
-                {% if floor in floor_folders_map_imgs %}
+                {% if floor in floor_imgs %}
                     {% for flr, url in floor_imgs.items %}
                         {% if floor == flr %}
                         <img src= {{url}}  class="thumbnail" onclick="openModal(this)">

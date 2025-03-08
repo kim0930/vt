@@ -46,7 +46,7 @@ INSTALLED_APPS = [
     # Custom apps
     'users',
     'projects',  # 👈 프로젝트 앱 
-    'virtual_tour',  # 👈 프로젝트 앱 
+    'virtual_tour',   
 ]
 
 MIDDLEWARE = [

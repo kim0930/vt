@@ -12,6 +12,10 @@ def project_image_upload_path(instance, filename):
     """이미지가 projects/{id}/ 경로에 저장되도록 설정"""
     return os.path.join("projects", str(instance.id), filename)
 
+def floor_plan_upload_path(instance, filename):
+    """층별 도면 이미지가 projects/{id}/map/ 경로에 저장되도록 설정"""
+    return os.path.join("projects", str(instance.project.id), "map", filename)
+
 class Project(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)  # 고유 ID (UUID)
     title = models.CharField(max_length=255)  # 프로젝트명
@@ -28,17 +32,19 @@ class Project(models.Model):
     end_date = models.DateField("공사 종료일")
     floors_min = models.SmallIntegerField()
     floors_max = models.SmallIntegerField()
+    floor_plans = models.ManyToManyField('FloorPlanImage', blank=True, related_name='project_floor_plans')  # ✅ 층별 도면 이미지 필드 추가
 
     def __str__(self):
         return f"{self.title} ({self.id})"  # 프로젝트명과 고유 ID 함께 표시
     
-    def clean(self):
     # floors_min이 floors_max보다 클 경우 ValidationError 발생
+    def clean(self):
         if self.floors_min > self.floors_max:
             raise ValidationError({
-                '최저층': 'The minimum floor must be less than or equal to the maximum floor.',
-                '최고층': 'The maximum floor must be greater than or equal to the minimum floor.'
+                'max floor': 'The minimum floor must be less than or equal to the maximum floor.',
+                'min floor': 'The maximum floor must be greater than or equal to the minimum floor.'
             })
+            
     def save(self, *args, **kwargs):
             """이미지 업로드 시 해상도를 낮춰서 저장"""
             super().save(*args, **kwargs)  # 먼저 기본 저장 수행
@@ -55,11 +61,19 @@ class Project(models.Model):
                     # ✅ 원본 파일을 리사이징된 이미지로 덮어쓰기
                     img.save(image_path, format=img.format if img.format else "JPEG", quality=70)
     
-    def image_folder_path(self):  # 파노라마 데이터셋 폴더 업로드
+    # 파노라마 데이터셋 폴더 업로드
+    def image_folder_path(self):  
         """프로젝트별 이미지 폴더 경로 (media/projects/YYYY-MM-DD/)"""
         return os.path.join("projects", self.created_at.strftime("%Y-%m-%d"))
 
+class FloorPlanImage(models.Model):
+    project = models.ForeignKey(Project, on_delete=models.CASCADE)
+    image = models.ImageField(upload_to=floor_plan_upload_path)
+    floor = models.CharField(max_length=20) # 층 정보
 
+    def __str__(self):
+        return f"{self.project.title} - {self.floor}"
+    
 class PanoramaImage(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)  # 고유 ID
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
@@ -88,6 +102,8 @@ class PanoramaLink(models.Model):
 
     def __str__(self):
         return f"{self.from_panorama.name} → {self.to_panorama.name}"
+    
+    
     
 # 파노라마 생성
 # p1 = Panorama.objects.create(name="파노라마 1", project=project)
