@@ -76,6 +76,12 @@ var keyboardControls = {
 
 let isPointSelectionEnabled = false; // 점 선택 활성화 상태를 추적하는 새로운 변수
 
+// 날짜별 측정 데이터를 저장할 객체 추가
+let datesMeasurementData = {};
+
+// 위치(파노라마)별 측정 데이터를 저장할 객체 추가
+let locationsMeasurementData = {};
+
 /**
  * Starts panorama, creates a loading scene and triggers the loading of the start location. Starts animating.
  * @param dataURL URL to the config JSON
@@ -103,168 +109,69 @@ function startVTProject(dataURL, res, projectId) {
 }
 
 function startPanorama(renderedDateStr, res, projectId) {
-	// 로딩 화면 표시
-	var loadingScreen = document.getElementById('loadingScreen');
-	
-	// 진행 상태 표시줄 초기화 및 애니메이션 설정을 위한 변수
-	var progressInterval;
-	
-	if (loadingScreen) {
-		// 기존 로딩 화면이 있으면 표시하고 프로그레스 바 초기화
-		loadingScreen.style.display = 'flex';
-		
-		// 프로그레스 바 초기화
-		var progressBar = document.getElementById('loadingProgressBar');
-		if (progressBar) {
-			progressBar.style.width = '0%';
-			
-			// 기존 인터벌 제거
-			if (window.loadingProgressInterval) {
-				clearInterval(window.loadingProgressInterval);
-			}
-			
-			// 새로운 진행 상태 애니메이션 시작
-			var progress = 0;
-			window.loadingProgressInterval = setInterval(function() {
-				progress += 5;
-				if (progress > 90) {
-					clearInterval(window.loadingProgressInterval);
-				}
-				progressBar.style.width = progress + '%';
-			}, 50);
-		}
-	} else {
-		// 로딩 화면 요소가 없으면 생성
-		loadingScreen = document.createElement('div');
-		loadingScreen.id = 'loadingScreen';
-		loadingScreen.style.position = 'fixed';
-		loadingScreen.style.top = '0';
-		loadingScreen.style.left = '0';
-		loadingScreen.style.width = '100%';
-		loadingScreen.style.height = '100%';
-		loadingScreen.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-		loadingScreen.style.display = 'flex';
-		loadingScreen.style.flexDirection = 'column';
-		loadingScreen.style.justifyContent = 'center';
-		loadingScreen.style.alignItems = 'center';
-		loadingScreen.style.zIndex = '9999';
-		
-		// 로딩 스피너 컨테이너
-		var spinnerContainer = document.createElement('div');
-		spinnerContainer.style.position = 'relative';
-		spinnerContainer.style.width = '80px';
-		spinnerContainer.style.height = '80px';
-		spinnerContainer.style.marginBottom = '20px';
-		
-		// 로딩 스피너 (회전하는 원)
-		var spinner = document.createElement('div');
-		spinner.style.border = '4px solid rgba(255, 255, 255, 0.3)';
-		spinner.style.borderTop = '4px solid #ffffff';
-		spinner.style.borderRadius = '50%';
-		spinner.style.width = '100%';
-		spinner.style.height = '100%';
-		spinner.style.animation = 'spin 1s linear infinite';
-		
-		// 애니메이션 키프레임 추가
-		var style = document.createElement('style');
-		style.innerHTML = `
-			@keyframes spin {
-				0% { transform: rotate(0deg); }
-				100% { transform: rotate(360deg); }
-			}
-			@keyframes fadeIn {
-				0% { opacity: 0; }
-				100% { opacity: 1; }
-			}
-		`;
-		document.head.appendChild(style);
-		
-		// 로딩 텍스트
-		var loadingText = document.createElement('div');
-		loadingText.textContent = 'LOADING';
-		loadingText.style.color = 'white';
-		loadingText.style.fontSize = '18px';
-		loadingText.style.fontFamily = 'Arial, sans-serif';
-		loadingText.style.fontWeight = 'bold';
-		loadingText.style.letterSpacing = '3px';
-		loadingText.style.animation = 'fadeIn 1s ease-in-out infinite alternate';
-		
-		// 진행 상태 표시줄 컨테이너
-		var progressContainer = document.createElement('div');
-		progressContainer.style.width = '200px';
-		progressContainer.style.height = '4px';
-		progressContainer.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
-		progressContainer.style.borderRadius = '2px';
-		progressContainer.style.marginTop = '15px';
-		
-		// 진행 상태 표시줄
-		var progressBar = document.createElement('div');
-		progressBar.id = 'loadingProgressBar';
-		progressBar.style.width = '0%';
-		progressBar.style.height = '100%';
-		progressBar.style.backgroundColor = '#ffffff';
-		progressBar.style.borderRadius = '2px';
-		progressBar.style.transition = 'width 0.3s ease-in-out';
-		
-		// 요소들 조합
-		spinnerContainer.appendChild(spinner);
-		progressContainer.appendChild(progressBar);
-		loadingScreen.appendChild(spinnerContainer);
-		loadingScreen.appendChild(loadingText);
-		loadingScreen.appendChild(progressContainer);
-		document.body.appendChild(loadingScreen);
-		
-		// 진행 상태 애니메이션
-		var progress = 0;
-		// 기존 인터벌 제거
-		if (window.loadingProgressInterval) {
-			clearInterval(window.loadingProgressInterval);
-		}
-		
-		// 새로운 진행 상태 애니메이션 시작
-		window.loadingProgressInterval = setInterval(function() {
-			progress += 5;
-			if (progress > 90) {
-				clearInterval(window.loadingProgressInterval);
-			}
-			progressBar.style.width = progress + '%';
-		}, 50);
-	}
-	
+	/*
+	renderedDate: Date()
+	*/
 	target_dataURL = find_dataURL(renderedDateStr)
 	target_dataURL = datesJsonUrl + target_dataURL
+	console.log("날짜 변경:", renderedDateStr);
+	
+	// 날짜가 변경되면 현재 측정 데이터 저장 
+	if (selectedDateStr && projectId && selectedDateStr !== renderedDateStr) {
+		console.log(`날짜 변경 감지: ${selectedDateStr} -> ${renderedDateStr}`);
+		// 현재 날짜의 측정 데이터 저장
+		saveMeasurementsForCurrentDate();
+		
+		// 현재 위치의 측정 데이터 저장
+		if (lastPanoramaUID !== undefined && lastPanoramaUID !== -1) {
+			saveMeasurementsForCurrentLocation();
+		}
+	}
+	
 	selectedDate = new Date(renderedDateStr)
 	copiedDate = new Date(selectedDateStr)	
 
 	resolution = res;
 	setMapandNavigationHidden(true);
 	isLoading = true;
+	
+	// 새로운 날짜로 선택 변경
+	selectedDateStr = renderedDateStr;
+	
+	// 선택된 날짜의 측정 데이터 로드
+	if (datesMeasurementData[selectedDateStr]) {
+		console.log(`Loading measurement data for date: ${selectedDateStr}`);
+		loadMeasurementsForDate(selectedDateStr);
+	} else {
+		console.log(`No measurement data found for date: ${selectedDateStr}`);
+		// 데이터가 없으면 현재 측정 데이터 초기화
+		clearMeasurementLines();
+	}
+	
 	parseConfigJSON(target_dataURL, function (panodata) {
 		var loader = new LocationLoader();
 		loader.loadLocation(panodata.startLocation, function(location) {
-			// 로딩 완료 시 프로그레스 바 100%로 설정
-			var progressBar = document.getElementById('loadingProgressBar');
-			if (progressBar) {
-				// 기존 인터벌 제거
-				if (window.loadingProgressInterval) {
-					clearInterval(window.loadingProgressInterval);
-				}
-				progressBar.style.width = '100%';
-			}
+			startComplete(location);
 			
-			// 0.5초 후에 로딩 화면 숨기기 
-			setTimeout(function() {
-				if (loadingScreen) {
-					loadingScreen.style.display = 'none';
+			// 날짜가 변경되면 새 위치에 대한 측정 데이터 로드
+			if (lastPanoramaUID !== undefined && lastPanoramaUID !== -1) {
+				console.log(`Loading measurement data for location: ${lastPanoramaUID}`);
+				
+				// 새 위치에 대한 측정 데이터 로드
+				const locationKey = `${selectedDateStr}_${lastPanoramaUID}`;
+				if (locationsMeasurementData[locationKey]) {
+					loadMeasurementsForLocation(lastPanoramaUID);
 				}
-				startComplete(location);
-			}, 500);
+			}
 		});
 	});
-    if (animationId) {
-        cancelAnimationFrame(animationId);
-    }
-    animationId = requestAnimationFrame(animate);
+	
+	// 기존 애니메이션 취소 후 새로 시작
+	if (animationId) {
+		cancelAnimationFrame(animationId);
+		animationId = null;
+	}
+	animate();
 }
 
 function Date2DateStr(renderedDate) {
@@ -316,6 +223,25 @@ function parseConfigJSON(dataURL, callback) {
  * Initializes renderer, camera, projector, tooltip
  */
 function init() {
+	// 기존 측정 데이터 불러오기 (localStorage에서)
+	try {
+		// 날짜별 측정 데이터 불러오기
+		const savedDateData = localStorage.getItem('vtMeasurements_' + projectId);
+		if (savedDateData) {
+			datesMeasurementData = JSON.parse(savedDateData);
+			console.log("Loaded date measurements from localStorage");
+		}
+		
+		// 위치별 측정 데이터 불러오기
+		const savedLocationData = localStorage.getItem('vtLocationMeasurements_' + projectId);
+		if (savedLocationData) {
+			locationsMeasurementData = JSON.parse(savedLocationData);
+			console.log("Loaded location measurements from localStorage");
+		}
+	} catch (e) {
+		console.warn('Failed to load measurements from localStorage:', e);
+	}
+	
 	camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 200);
 	camera.target = new THREE.Vector3(0, 0, 1);
 	if (Detector.webgl) {
@@ -385,6 +311,9 @@ function startComplete(location) {
 		console.log("No depth map available for current resolution");
 	}
 
+	// 초기 위치의 측정 데이터 로드
+	loadMeasurementsForLocation(location.uid);
+
 	// 📌 갱신된 날짜로 캘린더 다시 생성
 	_('current-date').textContent = selectedDateStr;
 	calendar.regenerate(selectedDate); 
@@ -411,6 +340,17 @@ function updateTargetList() {
  * @param reset if true camera rotates as if it is a start location.
  */
 function transitToLocation(locationIndex, reset) {
+	// 현재 위치의 측정 데이터 저장
+	if (lastPanoramaUID !== undefined && lastPanoramaUID !== -1) {
+		// 위치별 측정 데이터 저장
+		saveMeasurementsForCurrentLocation();
+		
+		// 현재 날짜의 측정 데이터 저장
+		if (selectedDateStr && projectId) {
+			saveMeasurementsForCurrentDate();
+		}
+	}
+	
 	if (reset) {
 		lastPanoramaUID = -1;
 	}
@@ -439,8 +379,18 @@ function transitToLocation(locationIndex, reset) {
 				lon = -103;
 			}
 
+			// 이전 위치 저장
+			const previousLocationId = lastPanoramaUID;
+			
+			// 현재 위치 업데이트
 			lastPanoramaUID = location.uid;
 			mapUid = location.mapUid;
+			
+			// 새 위치에 대한 측정 데이터 로드
+			if (selectedDateStr && projectId && lastPanoramaUID !== undefined) {
+				loadMeasurementsForLocation(lastPanoramaUID);
+			}
+			
 			updateSceneSwitchButton();
 			updateTargetList();
 			setupDarkBlurShader();
@@ -454,6 +404,16 @@ function transitToLocation(locationIndex, reset) {
 			if (location.depthMap && location.depthMap[resolution]) {
 				loadDepthMap(location.depthMap[resolution]);
 			}
+			
+			// 새 위치의 측정 데이터 로드
+			loadMeasurementsForLocation(location.uid);
+			
+			// 이동 후 애니메이션 루프 초기화
+			if (animationId) {
+				cancelAnimationFrame(animationId);
+				animationId = null;
+			}
+			animate();
 		});
 	}, 50);
 }
@@ -1036,6 +996,52 @@ function onDocumentTouchEnd(event) {
  * @param event input event
  */
 function moveEventHandler(eventX, eventY, event) { 
+    // 마우스 위치 업데이트
+    mouse.x = (eventX / window.innerWidth) * 2 - 1;
+    mouse.y = -(eventY / window.innerHeight) * 2 + 1;
+    
+    // 측정 모드에서 마우스 커서 업데이트
+    if (isMeasureMode) {
+        // 점 선택 모드가 아닐 때만 측정선 삭제 가능
+        if (!isPointSelectionEnabled) {
+            // 측정 라인 위에 마우스가 있는지 확인
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(new THREE.Vector2(mouse.x, mouse.y), camera);
+            
+            // 측정 라인과 레이블 배열 생성
+            const measurementObjects = [...measurementLines3D, ...measurementLabels];
+            
+            // 레이캐스팅으로 마우스 아래 객체 확인
+            const intersects = raycaster.intersectObjects(measurementObjects, true);
+            
+            if (intersects.length > 0) {
+                // 마우스가 측정 라인 위에 있으면 포인터 커서로 변경
+                const hoveredObject = intersects[0].object;
+                if (hoveredObject.userData && (hoveredObject.userData.type === 'measurementLine' || hoveredObject.userData.type === 'measurementLabel')) {
+                    document.body.style.cursor = 'pointer';
+                    return;
+                }
+            }
+        }
+        
+        // 측정 라인 위에 없거나 점 선택 모드일 때
+        if (isPointSelectionEnabled) {
+            // 점 선택 모드에서는 십자선 커서
+            document.body.style.cursor = 'crosshair';
+            
+            // 포인트 인디케이터 표시 및 위치 업데이트
+            const pointIndicator = document.getElementById('pointIndicator');
+            if (pointIndicator) {
+                pointIndicator.style.display = 'block';
+                pointIndicator.style.left = eventX + 'px';
+                pointIndicator.style.top = eventY + 'px';
+            }
+        } else {
+            // 점 선택 모드가 아니면 기본 커서
+            document.body.style.cursor = 'default';
+        }
+    }
+    
     if (window.isResizing) {
         return;
     }
@@ -1111,7 +1117,6 @@ function moveEventHandler(eventX, eventY, event) {
 	}
 }
 
-
 /**
  * Handler for starting input events.
  * @param eventX x-Value of event
@@ -1133,6 +1138,39 @@ function downEventHandler(eventX, eventY, event) {
     mouseDownTime = Date.now();
     mouseDownX = eventX;
     mouseDownY = eventY;
+    
+    // 측정 라인 클릭 확인 - 점 선택 모드가 아닐 때만 삭제 가능
+    if (isMeasureMode && !isPointSelectionEnabled) {
+        // 마우스 위치를 정규화된 좌표로 변환 (-1 ~ 1)
+        const normalizedX = (eventX / window.innerWidth) * 2 - 1;
+        const normalizedY = -(eventY / window.innerHeight) * 2 + 1;
+        
+        // 레이캐스터 생성 및 설정
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(new THREE.Vector2(normalizedX, normalizedY), camera);
+        
+        // 측정 라인과 레이블 배열 생성
+        const measurementObjects = [...measurementLines3D, ...measurementLabels];
+        
+        // 레이캐스팅으로 클릭된 객체 확인
+        const intersects = raycaster.intersectObjects(measurementObjects, true);
+        
+        if (intersects.length > 0) {
+            // 클릭된 객체의 ID 가져오기
+            const clickedObject = intersects[0].object;
+            if (clickedObject.userData && (clickedObject.userData.type === 'measurementLine' || clickedObject.userData.type === 'measurementLabel')) {
+                const measurementId = clickedObject.userData.id;
+                
+                // 해당 측정 라인 삭제
+                removeMeasurementLine(measurementId);
+                
+                // 이벤트 처리 완료
+                event.preventDefault();
+                event.stopPropagation();
+                return;
+            }
+        }
+    }
 
     // 항상 드래그를 위한 상호작용 활성화 (카메라 이동 가능하도록)
     isUserInteracting = true;
@@ -1148,12 +1186,11 @@ function downEventHandler(eventX, eventY, event) {
             event.target.id !== 'confirmMeasure' && 
             event.target.id !== 'clearMeasure' &&
             event.target.id !== 'measureModeBtn' &&
-            event.target.id !== 'measureModeExitBtn') {
-            // 카메라 이동은 허용하지만 점 선택은 방지
+            !event.target.classList.contains('measure-control-btn')) {
             return;
         }
     }
-
+    
     // 클릭한 객체 확인 (Transition, Hotspot 등)
     event.preventDefault();
 
@@ -1209,24 +1246,38 @@ function upEventHandler(event) {
             
             // 짧은 클릭으로 간주 (300ms 이내, 이동 거리 5px 이내)
             if (timeDiff < 300 && distanceX < 5 && distanceY < 5) {
-                const normalizedX = event.pageX / window.innerWidth;
-                const normalizedY = event.pageY / window.innerHeight;
+                // 화면 좌표를 정규화된 좌표로 변환 (-1 ~ 1)
+                const normalizedX = (event.pageX / window.innerWidth) * 2 - 1;
+                const normalizedY = -(event.pageY / window.innerHeight) * 2 + 1;
                 
-                // 새 점 추가
+                // 3D 벡터 생성
+                const vector = new THREE.Vector3(normalizedX, normalizedY, 0.5);
+                
+                // 카메라의 투영 행렬을 사용하여 3D 공간의 점으로 변환
+                vector.unproject(camera);
+                
+                // 구면 위로 투영
+                const direction = vector.sub(camera.position).normalize();
+                const spherePoint = direction.multiplyScalar(195);
+                
+                // 새 점 추가 (3D 좌표와 화면 좌표 모두 저장)
                 const newPoint = {
                     x: event.pageX,
                     y: event.pageY,
-                    normalizedX: normalizedX,
-                    normalizedY: normalizedY
+                    normalizedX: event.pageX / window.innerWidth,
+                    normalizedY: event.pageY / window.innerHeight,
+                    vector3D: spherePoint.clone() // 3D 좌표 저장
                 };
                 
                 // 이전 점이 있으면 선 그리기
                 if (points3D.length > 0) {
                     const prevPoint = points3D[points3D.length - 1];
-                    const distance = calculate3DDistance(prevPoint, newPoint);
-                    if (distance !== null) {
-                        draw3DMeasurementLine(prevPoint, newPoint, distance);
-                    }
+                    
+                    // 3D 거리 계산 (저장된 3D 벡터 사용)
+                    const distance = prevPoint.vector3D.distanceTo(newPoint.vector3D) / 10; // 스케일 조정
+                    
+                    // 선 그리기 (3D 벡터 사용)
+                    draw3DMeasurementLine(prevPoint, newPoint, distance);
                 }
                 
                 // 새 점 저장
@@ -1313,6 +1364,12 @@ function showAbout(event) {
  * Update for new frame from Browser.
  */
 function animate() {
+	// 기존 애니메이션 프레임 요청을 취소
+	if (animationId) {
+		cancelAnimationFrame(animationId);
+	}
+	
+	// 새 애니메이션 프레임 요청
 	animationId = requestAnimationFrame(animate);
 	update();
 }
@@ -1327,12 +1384,18 @@ function update() {
 
 	// if popUp is not open
 	if (!isPopupOpen) {
-		lon = (lon + lonFactor) % 360;
-		lat = lat + latFactor;
-		// console logs: coordinates for starting view of a location
-		//console.log("Camera Target: " + "lat: " + lat + "  lon: " + lon);
-
+		// 회전 속도를 일정하게 유지 (lonFactor와 latFactor가 설정된 경우만 적용)
+		if (lonFactor !== 0) {
+			lon = (lon + lonFactor) % 360;
+		}
+		
+		if (latFactor !== 0) {
+			lat = lat + latFactor;
+		}
+		
+		// 위도(lat) 범위 제한
 		lat = Math.max(-35, Math.min(45, lat));
+		
 		phi = THREE.Math.degToRad(90 - lat);
 		theta = THREE.Math.degToRad(lon);
 		camera.target.x = 195 * Math.sin(phi) * Math.cos(theta);
@@ -1594,27 +1657,183 @@ function calculate3DDistance(point1, point2) {
     return null;
 }
 
-function draw3DMeasurementLine(point1, point2, distance) {
-    // 3D 공간에서의 점 좌표 계산
-    const vector1 = new THREE.Vector3();
-    const vector2 = new THREE.Vector3();
+// 현재 측정 데이터 저장 함수
+function saveMeasurementsForCurrentDate() {
+    if (!selectedDateStr || !projectId) {
+        console.warn("Cannot save measurements: missing date or project ID");
+        return;
+    }
     
-    // 화면 좌표를 정규화된 좌표로 변환 (-1 ~ 1)
-    vector1.x = (point1.normalizedX * 2) - 1;
-    vector1.y = -(point1.normalizedY * 2) + 1;
-    vector1.z = 0.5;
+    console.log(`Saving measurements for date ${selectedDateStr}: ${measurementLines3D.length} lines, ${measurementLabels.length} labels`);
     
-    vector2.x = (point2.normalizedX * 2) - 1;
-    vector2.y = -(point2.normalizedY * 2) + 1;
-    vector2.z = 0.5;
+    // 현재 날짜의 측정 데이터 수집
+    const measurementData = {
+        lines: [],
+        labels: [],
+        points3D: []
+    };
     
-    // 카메라의 투영 행렬을 사용하여 3D 공간의 점으로 변환
-    vector1.unproject(camera);
-    vector2.unproject(camera);
+    try {
+        // 측정선 데이터 수집
+        measurementLines3D.forEach((line) => {
+            if (line && line.geometry && line.geometry.attributes && line.geometry.attributes.position) {
+                try {
+                    const positions = line.geometry.attributes.position.array;
+                    const points = [];
+                    for (let i = 0; i < positions.length; i += 3) {
+                        points.push({
+                            x: positions[i],
+                            y: positions[i + 1],
+                            z: positions[i + 2]
+                        });
+                    }
+                    
+                    measurementData.lines.push({
+                        id: line.userData ? line.userData.id : Date.now().toString(),
+                        points: points,
+                        visible: line.visible
+                    });
+                } catch (e) {
+                    console.error("Error saving line:", e);
+                }
+            }
+        });
+        
+        // 측정 레이블 데이터 수집
+        measurementLabels.forEach((label) => {
+            if (label && label.position) {
+                try {
+                    measurementData.labels.push({
+                        id: label.userData ? label.userData.id : Date.now().toString(),
+                        position: {
+                            x: label.position.x,
+                            y: label.position.y,
+                            z: label.position.z
+                        },
+                        text: label.userData && label.userData.text ? label.userData.text : '',
+                        visible: label.visible,
+                        scale: {
+                            x: label.scale.x,
+                            y: label.scale.y,
+                            z: label.scale.z
+                        }
+                    });
+                } catch (e) {
+                    console.error("Error saving label:", e);
+                }
+            }
+        });
+        
+        // 측정 포인트 데이터 수집
+        measurementPoints3D.forEach((point) => {
+            if (point && point.points && Array.isArray(point.points)) {
+                try {
+                    const pointData = {
+                        id: point.id || Date.now().toString(),
+                        points: point.points.map(p => ({ 
+                            x: p.x, 
+                            y: p.y, 
+                            z: p.z 
+                        }))
+                    };
+                    measurementData.points3D.push(pointData);
+                } catch (e) {
+                    console.error("Error saving point:", e);
+                }
+            }
+        });
+        
+        // 현재 날짜에 데이터 저장
+        datesMeasurementData[selectedDateStr] = measurementData;
+        
+        // localStorage에 저장 (선택 사항)
+        try {
+            localStorage.setItem('vtMeasurements_' + projectId, JSON.stringify(datesMeasurementData));
+            console.log("Measurements saved to localStorage");
+        } catch (e) {
+            console.warn('Failed to save measurements to localStorage:', e);
+        }
+    } catch (e) {
+        console.error("Error in saveMeasurementsForCurrentDate:", e);
+    }
+}
+
+// 특정 날짜의 측정 데이터 로드 함수
+function loadMeasurementsForDate(dateStr) {
+    // 먼저 현재 측정 데이터 정리
+    clearMeasurementLines();
     
-    // 점들을 구면 위로 투영
-    vector1.normalize().multiplyScalar(195);
-    vector2.normalize().multiplyScalar(195);
+    // 해당 날짜의 측정 데이터가 없으면 종료
+    if (!datesMeasurementData[dateStr]) return;
+    
+    const data = datesMeasurementData[dateStr];
+    
+    // 측정선 복원
+    data.lines.forEach((lineData) => {
+        if (lineData.points && lineData.points.length >= 2) {
+            try {
+                // 첫 번째와 두 번째 점으로 선 생성
+                const point1 = {
+                    vector3D: new THREE.Vector3(
+                        lineData.points[0].x,
+                        lineData.points[0].y,
+                        lineData.points[0].z
+                    )
+                };
+                
+                const point2 = {
+                    vector3D: new THREE.Vector3(
+                        lineData.points[1].x,
+                        lineData.points[1].y,
+                        lineData.points[1].z
+                    )
+                };
+                
+                // 두 점 사이의 거리 계산
+                const distance = point1.vector3D.distanceTo(point2.vector3D) / 10;
+                
+                // 측정선 그리기
+                const line = createMeasurementLine(point1, point2, distance, lineData.id);
+                
+                // 현재 측정 모드 상태에 따라 가시성 설정
+                line.visible = isMeasureMode;
+            } catch (e) {
+                console.error("Error restoring measurement line:", e);
+            }
+        }
+    });
+    
+    // 측정 포인트 데이터 복원
+    if (data.points3D && Array.isArray(data.points3D)) {
+        data.points3D.forEach((pointData) => {
+            if (pointData.points && Array.isArray(pointData.points)) {
+                try {
+                    const pointsVector3 = pointData.points.map(p => 
+                        new THREE.Vector3(p.x, p.y, p.z)
+                    );
+                    
+                    measurementPoints3D.push({
+                        id: pointData.id,
+                        points: pointsVector3
+                    });
+                } catch (e) {
+                    console.error("Error restoring measurement points:", e);
+                }
+            }
+        });
+    }
+    
+    console.log(`Loaded measurements for date ${dateStr}: ${measurementLines3D.length} lines, ${measurementLabels.length} labels`);
+}
+
+// 측정선 생성 함수 (기존 draw3DMeasurementLine 함수와 내부 로직 동일하나, ID를 받을 수 있도록 수정)
+function createMeasurementLine(point1, point2, distance, id = null) {
+    // 고유 ID 생성 또는 사용
+    const measurementId = id || Date.now().toString();
+    
+    // 3D 공간에서의 점 좌표 사용
+    const vector1 = point1.vector3D.clone();
+    const vector2 = point2.vector3D.clone();
     
     // 선 생성을 위한 geometry
     const geometry = new THREE.BufferGeometry().setFromPoints([vector1, vector2]);
@@ -1634,19 +1853,19 @@ function draw3DMeasurementLine(point1, point2, distance) {
         linewidth: lineWidth,
         opacity: 0.9, // 약간의 투명도
         transparent: true,
-        depthTest: false, // 항상 다른 객체 위에 그려지도록
-        renderOrder: 999 // 가장 마지막에 렌더링되도록 설정
+        depthTest: false // 항상 다른 객체 위에 그려지도록
     });
     
     // 새로운 선 생성 및 장면에 추가
     const line = new THREE.Line(geometry, material);
     line.renderOrder = 999; // 선도 마지막에 렌더링되도록 설정
+    line.userData = { type: 'measurementLine', id: measurementId }; // 식별자 추가
+    line.visible = isMeasureMode; // 측정 모드일 때만 보이도록 설정
     scene.add(line);
     measurementLines3D.push(line);
     
     // 3D 공간에서 선의 중점 계산
     const midPoint = new THREE.Vector3().addVectors(vector1, vector2).multiplyScalar(0.5);
-    midPoint.normalize().multiplyScalar(196); // 선보다 약간 앞에 위치하도록
     
     // Three.js를 사용하여 3D 공간에 거리 레이블 생성
     const distanceText = `${distance.toFixed(2)}m`;
@@ -1703,12 +1922,18 @@ function draw3DMeasurementLine(point1, point2, distance) {
         map: texture,
         transparent: true,
         depthTest: false,
-        depthWrite: false,
-        renderOrder: 1000
+        depthWrite: false
     });
     
     // 스프라이트 생성
     const sprite = new THREE.Sprite(spriteMaterial);
+    sprite.renderOrder = 1000; // 렌더링 순서 설정
+    sprite.userData = { 
+        type: 'measurementLabel', 
+        id: measurementId,
+        text: distanceText
+    }; // 식별자와 텍스트 추가
+    sprite.visible = isMeasureMode; // 측정 모드일 때만 보이도록 설정
     
     // 스프라이트 크기 설정 (텍스트 크기에 비례)
     const scale = 0.08; // 스케일 값 증가 (0.05 -> 0.08)
@@ -1724,7 +1949,17 @@ function draw3DMeasurementLine(point1, point2, distance) {
     measurementLabels.push(sprite);
     
     // 3D 점들과 중점 저장
-    measurementPoints3D.push([vector1, vector2, midPoint]);
+    measurementPoints3D.push({
+        points: [vector1, vector2, midPoint],
+        id: measurementId
+    });
+    
+    return line;
+}
+
+// 기존 draw3DMeasurementLine 함수 수정 - createMeasurementLine 호출로 대체
+function draw3DMeasurementLine(point1, point2, distance) {
+    const line = createMeasurementLine(point1, point2, distance);
     
     // 측정선이 그려진 후 컨트롤 그룹 표시
     const measureControl = document.getElementById('measureControl');
@@ -1734,8 +1969,148 @@ function draw3DMeasurementLine(point1, point2, distance) {
     measureControl.style.display = 'none';
     measureControlGroup.classList.add('active');
     
-    // 점 선택은 계속 활성화 상태 유지 (isPointSelectionEnabled는 변경하지 않음)
-    // points3D 배열은 초기화하지 않음 (연속 선택을 위해)
+    return line;
+}
+
+// 특정 ID의 측정 라인 삭제
+function removeMeasurementLine(measurementId) {
+    console.log(`Removing measurement line with ID: ${measurementId}`);
+    
+    // 라인 찾기 및 삭제
+    const lineIndex = measurementLines3D.findIndex(line => line.userData.id === measurementId);
+    if (lineIndex !== -1) {
+        const line = measurementLines3D[lineIndex];
+        scene.remove(line);
+        if (line.geometry) line.geometry.dispose();
+        if (line.material) line.material.dispose();
+        measurementLines3D.splice(lineIndex, 1);
+        console.log(`Removed line at index ${lineIndex}`);
+    } else {
+        console.log(`Line with ID ${measurementId} not found in measurementLines3D`);
+    }
+    
+    // 레이블 찾기 및 삭제
+    const labelIndex = measurementLabels.findIndex(label => label.userData.id === measurementId);
+    if (labelIndex !== -1) {
+        const label = measurementLabels[labelIndex];
+        scene.remove(label);
+        if (label.material && label.material.map) {
+            label.material.map.dispose();
+            label.material.dispose();
+        }
+        measurementLabels.splice(labelIndex, 1);
+        console.log(`Removed label at index ${labelIndex}`);
+    } else {
+        console.log(`Label with ID ${measurementId} not found in measurementLabels`);
+    }
+    
+    // 점 데이터 삭제
+    const pointIndex = measurementPoints3D.findIndex(point => point.id === measurementId);
+    if (pointIndex !== -1) {
+        measurementPoints3D.splice(pointIndex, 1);
+        console.log(`Removed point data at index ${pointIndex}`);
+    } else {
+        console.log(`Point with ID ${measurementId} not found in measurementPoints3D`);
+    }
+    
+    // 모든 측정이 삭제되었는지 확인
+    if (measurementLines3D.length === 0) {
+        // 측정 컨트롤 상태 업데이트
+        const measureControl = document.getElementById('measureControl');
+        const measureControlGroup = document.querySelector('.measure-control-group');
+        
+        measureControl.style.display = 'block';
+        measureControlGroup.classList.remove('active');
+    }
+
+    // datesMeasurementData에서도 해당 측정선 삭제
+    if (selectedDateStr && datesMeasurementData[selectedDateStr]) {
+        const dateData = datesMeasurementData[selectedDateStr];
+        
+        // 삭제 전 라인 개수 확인
+        const lineCountBefore = dateData.lines ? dateData.lines.length : 0;
+        
+        // 선 삭제
+        if (dateData.lines) {
+            dateData.lines = dateData.lines.filter(line => line.id !== measurementId);
+        }
+        
+        // 레이블 삭제
+        if (dateData.labels) {
+            dateData.labels = dateData.labels.filter(label => label.id !== measurementId);
+        }
+        
+        // 점 데이터 삭제
+        if (dateData.points3D) {
+            dateData.points3D = dateData.points3D.filter(point => point.id !== measurementId);
+        }
+        
+        // 삭제 후 라인 개수 확인
+        const lineCountAfter = dateData.lines ? dateData.lines.length : 0;
+        console.log(`Removed from datesMeasurementData: ${lineCountBefore - lineCountAfter} lines`);
+        
+        // 업데이트된 데이터 저장
+        datesMeasurementData[selectedDateStr] = dateData;
+        
+        // localStorage 업데이트
+        try {
+            localStorage.setItem('vtMeasurements_' + projectId, JSON.stringify(datesMeasurementData));
+            console.log("Updated measurements saved to localStorage after deletion");
+        } catch (e) {
+            console.warn('Failed to update measurements in localStorage:', e);
+        }
+    } else {
+        console.log(`No data found for date ${selectedDateStr} in datesMeasurementData`);
+    }
+    
+    // locationsMeasurementData에서도 해당 측정선 삭제
+    if (selectedDateStr && projectId && lastPanoramaUID !== undefined) {
+        const locationKey = `${selectedDateStr}_${lastPanoramaUID}`;
+        
+        if (locationsMeasurementData[locationKey]) {
+            const locationData = locationsMeasurementData[locationKey];
+            
+            // 삭제 전 라인 개수 확인
+            const lineCountBefore = locationData.lines ? locationData.lines.length : 0;
+            
+            // 선 삭제
+            if (locationData.lines) {
+                locationData.lines = locationData.lines.filter(line => line.id !== measurementId);
+            }
+            
+            // 레이블 삭제
+            if (locationData.labels) {
+                locationData.labels = locationData.labels.filter(label => label.id !== measurementId);
+            }
+            
+            // 점 데이터 삭제
+            if (locationData.points3D) {
+                locationData.points3D = locationData.points3D.filter(point => point.id !== measurementId);
+            }
+            
+            // 삭제 후 라인 개수 확인
+            const lineCountAfter = locationData.lines ? locationData.lines.length : 0;
+            console.log(`Removed from locationsMeasurementData: ${lineCountBefore - lineCountAfter} lines for location ${locationKey}`);
+            
+            // 업데이트된 데이터 저장
+            locationsMeasurementData[locationKey] = locationData;
+            
+            // localStorage 업데이트
+            try {
+                localStorage.setItem('vtLocationMeasurements_' + projectId, JSON.stringify(locationsMeasurementData));
+                console.log("Updated location measurements saved to localStorage after deletion");
+            } catch (e) {
+                console.warn('Failed to update location measurements in localStorage:', e);
+            }
+        } else {
+            console.log(`No data found for location ${locationKey} in locationsMeasurementData`);
+        }
+    } else {
+        console.log(`Cannot update locationsMeasurementData: selectedDateStr=${selectedDateStr}, projectId=${projectId}, lastPanoramaUID=${lastPanoramaUID}`);
+    }
+    
+    // 현재 남아있는 측정선 개수 로그
+    console.log(`Remaining after deletion: ${measurementLines3D.length} lines, ${measurementLabels.length} labels`);
 }
 
 function clearMeasurementLines() {
@@ -1777,6 +2152,15 @@ function exitMeasureMode() {
     measureControl.style.display = 'none';
     measureControlGroup.classList.remove('active');
     pointIndicator.style.display = 'none';
+    
+    // 측정선과 레이블 숨기기
+    measurementLines3D.forEach(line => {
+        line.visible = false;
+    });
+    
+    measurementLabels.forEach(label => {
+        label.visible = false;
+    });
     
     // measureModeBtn 표시
     if (_("measureModeBtn")) _("measureModeBtn").style.display = 'block';
@@ -1907,27 +2291,18 @@ function initMeasurementUI() {
             isPointSelectionEnabled = true;
             measureControl.innerHTML = '×'; // X 아이콘으로 변경
             currentMeasurementStartIndex = measurementLines3D.length; // 현재 측정 시작 인덱스 업데이트
-            points3D = []; // 점 배열 초기화
+            points3D = []; // 점 배열 초기화 - 새로운 측정 시작
         } else if (measureControl.innerHTML === '×') {
             // X 아이콘 클릭 시 측정 취소
             isPointSelectionEnabled = false;
             measureControl.innerHTML = '+'; // + 아이콘으로 변경
             points3D = []; // 선택된 점 초기화
-            
-            // 현재 진행 중인 측정선이 있다면 삭제
-            if (points3D.length > 0) {
-                points3D = [];
-            }
         }
     });
 
     document.getElementById('confirmMeasure').addEventListener('click', function() {
-        // v 아이콘 클릭 시
-        measureControl.style.display = 'block'; // + 아이콘 다시 표시
-        measureControl.innerHTML = '+';
-        measureControlGroup.classList.remove('active');
-        isPointSelectionEnabled = false;
-        points3D = [];
+        // 측정 확인 함수 호출
+        confirmMeasurements();
     });
 
     document.getElementById('clearMeasure').addEventListener('click', function() {
@@ -1964,7 +2339,7 @@ function updateMeasureGuide(message) {
 function startMeasureMode() {
     isMeasureMode = true;
     isPointSelectionEnabled = false; // 초기에는 점 선택 비활성화
-    points3D = [];
+    points3D = []; // 점 배열 초기화
     currentMeasurementStartIndex = measurementLines3D.length; // 현재 측정 시작 인덱스 설정
     
     const measureControl = document.getElementById('measureControl');
@@ -1975,6 +2350,15 @@ function startMeasureMode() {
     measureControlGroup.classList.remove('active');
     
     document.addEventListener('mousemove', updatePointIndicator);
+    
+    // 측정선과 레이블 표시
+    measurementLines3D.forEach(line => {
+        line.visible = true;
+    });
+    
+    measurementLabels.forEach(label => {
+        label.visible = true;
+    });
     
     // measureModeBtn 숨기기
     if (_("measureModeBtn")) _("measureModeBtn").style.display = 'none';
@@ -2027,14 +2411,23 @@ function toggleMeasureMode() {
 
 // 현재 측정 확인
 function confirmMeasurements() {
+    // 현재 위치의 측정 데이터 저장
+    saveMeasurementsForCurrentLocation();
+    
+    // 현재 날짜의 측정 데이터 저장
+    saveMeasurementsForCurrentDate();
+    
+    console.log("측정 데이터가 저장되었습니다.");
+    
+    // UI 상태 업데이트
     const measureControl = document.getElementById('measureControl');
     const measureControlGroup = document.querySelector('.measure-control-group');
     
-    measureControl.style.display = 'block';
+    measureControl.style.display = 'block'; // + 아이콘 다시 표시
     measureControl.innerHTML = '+';
     measureControlGroup.classList.remove('active');
     isPointSelectionEnabled = false;
-    points3D = [];
+    points3D = []; // 새로운 측정을 위해 점 배열 초기화
 }
 
 // 현재 측정 삭제
@@ -2069,6 +2462,190 @@ function clearCurrentMeasurements() {
     measurementPoints3D.splice(currentMeasurementStartIndex);
     
     points3D = [];
+}
+
+// 현재 위치의 측정 데이터 저장 함수
+function saveMeasurementsForCurrentLocation() {
+    if (!selectedDateStr || !projectId || lastPanoramaUID === undefined) {
+        console.warn("Cannot save location measurements: missing date, project ID, or location ID");
+        return;
+    }
+    
+    const locationKey = `${selectedDateStr}_${lastPanoramaUID}`;
+    console.log(`Saving measurements for location ${locationKey}: ${measurementLines3D.length} lines, ${measurementLabels.length} labels`);
+    
+    // 현재 위치의 측정 데이터 수집
+    const measurementData = {
+        lines: [],
+        labels: [],
+        points3D: []
+    };
+    
+    try {
+        // 측정선 데이터 수집
+        measurementLines3D.forEach((line) => {
+            if (line && line.geometry && line.geometry.attributes && line.geometry.attributes.position) {
+                try {
+                    const positions = line.geometry.attributes.position.array;
+                    const points = [];
+                    for (let i = 0; i < positions.length; i += 3) {
+                        points.push({
+                            x: positions[i],
+                            y: positions[i + 1],
+                            z: positions[i + 2]
+                        });
+                    }
+                    
+                    measurementData.lines.push({
+                        id: line.userData ? line.userData.id : Date.now().toString(),
+                        points: points,
+                        visible: line.visible
+                    });
+                } catch (e) {
+                    console.error("Error saving line:", e);
+                }
+            }
+        });
+        
+        // 측정 레이블 데이터 수집
+        measurementLabels.forEach((label) => {
+            if (label && label.position) {
+                try {
+                    measurementData.labels.push({
+                        id: label.userData ? label.userData.id : Date.now().toString(),
+                        position: {
+                            x: label.position.x,
+                            y: label.position.y,
+                            z: label.position.z
+                        },
+                        text: label.userData && label.userData.text ? label.userData.text : '',
+                        visible: label.visible,
+                        scale: {
+                            x: label.scale.x,
+                            y: label.scale.y,
+                            z: label.scale.z
+                        }
+                    });
+                } catch (e) {
+                    console.error("Error saving label:", e);
+                }
+            }
+        });
+        
+        // 측정 포인트 데이터 수집
+        measurementPoints3D.forEach((point) => {
+            if (point && point.points && Array.isArray(point.points)) {
+                try {
+                    const pointData = {
+                        id: point.id || Date.now().toString(),
+                        points: point.points.map(p => ({ 
+                            x: p.x, 
+                            y: p.y, 
+                            z: p.z 
+                        }))
+                    };
+                    measurementData.points3D.push(pointData);
+                } catch (e) {
+                    console.error("Error saving point:", e);
+                }
+            }
+        });
+        
+        // 현재 위치에 데이터 저장
+        locationsMeasurementData[locationKey] = measurementData;
+        
+        // localStorage에 저장 (선택 사항)
+        try {
+            localStorage.setItem('vtLocationMeasurements_' + projectId, JSON.stringify(locationsMeasurementData));
+            console.log("Location measurements saved to localStorage");
+        } catch (e) {
+            console.warn('Failed to save location measurements to localStorage:', e);
+        }
+    } catch (e) {
+        console.error("Error in saveMeasurementsForCurrentLocation:", e);
+    }
+}
+
+// 특정 위치의 측정 데이터 로드 함수
+function loadMeasurementsForLocation(locationId) {
+    if (!selectedDateStr || !projectId) {
+        console.warn("Cannot load location measurements: missing date or project ID");
+        return;
+    }
+    
+    const locationKey = `${selectedDateStr}_${locationId}`;
+    console.log(`Loading measurements for location ${locationKey}`);
+    
+    // 먼저 현재 측정 데이터 정리
+    clearMeasurementLines();
+    
+    // 해당 위치의 측정 데이터가 없으면 종료
+    if (!locationsMeasurementData[locationKey]) {
+        console.log(`No measurements found for location ${locationKey}`);
+        return;
+    }
+    
+    const data = locationsMeasurementData[locationKey];
+    console.log(`Found ${data.lines.length} lines for location ${locationKey}`);
+    
+    // 측정선 복원
+    if (data.lines && Array.isArray(data.lines)) {
+        data.lines.forEach((lineData) => {
+            if (lineData.points && lineData.points.length >= 2) {
+                try {
+                    // 첫 번째와 두 번째 점으로 선 생성
+                    const point1 = {
+                        vector3D: new THREE.Vector3(
+                            lineData.points[0].x,
+                            lineData.points[0].y,
+                            lineData.points[0].z
+                        )
+                    };
+                    
+                    const point2 = {
+                        vector3D: new THREE.Vector3(
+                            lineData.points[1].x,
+                            lineData.points[1].y,
+                            lineData.points[1].z
+                        )
+                    };
+                    
+                    // 두 점 사이의 거리 계산
+                    const distance = point1.vector3D.distanceTo(point2.vector3D) / 10;
+                    
+                    // 측정선 그리기
+                    const line = createMeasurementLine(point1, point2, distance, lineData.id);
+                    
+                    // 현재 측정 모드 상태에 따라 가시성 설정
+                    line.visible = isMeasureMode;
+                } catch (e) {
+                    console.error("Error restoring measurement line:", e);
+                }
+            }
+        });
+    }
+    
+    // 측정 포인트 데이터 복원
+    if (data.points3D && Array.isArray(data.points3D)) {
+        data.points3D.forEach((pointData) => {
+            if (pointData.points && Array.isArray(pointData.points)) {
+                try {
+                    const pointsVector3 = pointData.points.map(p => 
+                        new THREE.Vector3(p.x, p.y, p.z)
+                    );
+                    
+                    measurementPoints3D.push({
+                        id: pointData.id,
+                        points: pointsVector3
+                    });
+                } catch (e) {
+                    console.error("Error restoring measurement points:", e);
+                }
+            }
+        });
+    }
+    
+    console.log(`Loaded measurements for location ${locationKey}: ${measurementLines3D.length} lines, ${measurementLabels.length} labels`);
 }
 
 
