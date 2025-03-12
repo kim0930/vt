@@ -112,9 +112,147 @@ function startPanorama(renderedDateStr, res, projectId) {
 	/*
 	renderedDate: Date()
 	*/
+	// 카메라 움직임 계수 초기화
+	lonFactor = 0;
+	latFactor = 0;
+	
+	// 이전 애니메이션 취소
+	if (animationId) {
+		cancelAnimationFrame(animationId);
+		animationId = null;
+	}
+	
 	target_dataURL = find_dataURL(renderedDateStr)
 	target_dataURL = datesJsonUrl + target_dataURL
 	console.log("날짜 변경:", renderedDateStr);
+	
+	// 로딩 화면 표시
+	var loadingScreen = document.getElementById('loadingScreen');
+	
+	// 진행 상태 표시줄 초기화 및 애니메이션 설정을 위한 변수
+	var progressInterval;
+	
+	if (loadingScreen) {
+		// 기존 로딩 화면이 있으면 표시하고 프로그레스 바 초기화
+		loadingScreen.style.display = 'flex';
+		
+		// 프로그레스 바 초기화
+		var progressBar = document.getElementById('loadingProgressBar');
+		if (progressBar) {
+			progressBar.style.width = '0%';
+			
+			// 기존 인터벌 제거
+			if (window.loadingProgressInterval) {
+				clearInterval(window.loadingProgressInterval);
+			}
+			
+			// 새로운 진행 상태 애니메이션 시작
+			var progress = 0;
+			window.loadingProgressInterval = setInterval(function() {
+				progress += 5;
+				if (progress > 90) {
+					clearInterval(window.loadingProgressInterval);
+				}
+				progressBar.style.width = progress + '%';
+			}, 50);
+		}
+	} else {
+		// 로딩 화면 요소가 없으면 생성
+		loadingScreen = document.createElement('div');
+		loadingScreen.id = 'loadingScreen';
+		loadingScreen.style.position = 'fixed';
+		loadingScreen.style.top = '0';
+		loadingScreen.style.left = '0';
+		loadingScreen.style.width = '100%';
+		loadingScreen.style.height = '100%';
+		loadingScreen.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+		loadingScreen.style.display = 'flex';
+		loadingScreen.style.flexDirection = 'column';
+		loadingScreen.style.justifyContent = 'center';
+		loadingScreen.style.alignItems = 'center';
+		loadingScreen.style.zIndex = '9999';
+		
+		// 로딩 스피너 컨테이너
+		var spinnerContainer = document.createElement('div');
+		spinnerContainer.style.position = 'relative';
+		spinnerContainer.style.width = '80px';
+		spinnerContainer.style.height = '80px';
+		spinnerContainer.style.marginBottom = '20px';
+		
+		// 로딩 스피너 (회전하는 원)
+		var spinner = document.createElement('div');
+		spinner.style.border = '4px solid rgba(255, 255, 255, 0.3)';
+		spinner.style.borderTop = '4px solid #ffffff';
+		spinner.style.borderRadius = '50%';
+		spinner.style.width = '100%';
+		spinner.style.height = '100%';
+		spinner.style.animation = 'spin 1s linear infinite';
+		
+		// 애니메이션 키프레임 추가
+		var style = document.createElement('style');
+		style.innerHTML = `
+			@keyframes spin {
+				0% { transform: rotate(0deg); }
+				100% { transform: rotate(360deg); }
+			}
+			@keyframes fadeIn {
+				0% { opacity: 0; }
+				100% { opacity: 1; }
+			}
+		`;
+		document.head.appendChild(style);
+		
+		// 로딩 텍스트
+		var loadingText = document.createElement('div');
+		loadingText.textContent = 'LOADING';
+		loadingText.style.color = 'white';
+		loadingText.style.fontSize = '18px';
+		loadingText.style.fontFamily = 'Arial, sans-serif';
+		loadingText.style.fontWeight = 'bold';
+		loadingText.style.letterSpacing = '3px';
+		loadingText.style.animation = 'fadeIn 1s ease-in-out infinite alternate';
+		
+		// 진행 상태 표시줄 컨테이너
+		var progressContainer = document.createElement('div');
+		progressContainer.style.width = '200px';
+		progressContainer.style.height = '4px';
+		progressContainer.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+		progressContainer.style.borderRadius = '2px';
+		progressContainer.style.marginTop = '15px';
+		
+		// 진행 상태 표시줄
+		var progressBar = document.createElement('div');
+		progressBar.id = 'loadingProgressBar';
+		progressBar.style.width = '0%';
+		progressBar.style.height = '100%';
+		progressBar.style.backgroundColor = '#ffffff';
+		progressBar.style.borderRadius = '2px';
+		progressBar.style.transition = 'width 0.3s ease-in-out';
+		
+		// 요소들 조합
+		spinnerContainer.appendChild(spinner);
+		progressContainer.appendChild(progressBar);
+		loadingScreen.appendChild(spinnerContainer);
+		loadingScreen.appendChild(loadingText);
+		loadingScreen.appendChild(progressContainer);
+		document.body.appendChild(loadingScreen);
+		
+		// 진행 상태 애니메이션
+		var progress = 0;
+		// 기존 인터벌 제거
+		if (window.loadingProgressInterval) {
+			clearInterval(window.loadingProgressInterval);
+		}
+		
+		// 새로운 진행 상태 애니메이션 시작
+		window.loadingProgressInterval = setInterval(function() {
+			progress += 5;
+			if (progress > 90) {
+				clearInterval(window.loadingProgressInterval);
+			}
+			progressBar.style.width = progress + '%';
+		}, 50);
+	}
 	
 	// 날짜가 변경되면 현재 측정 데이터 저장 
 	if (selectedDateStr && projectId && selectedDateStr !== renderedDateStr) {
@@ -138,40 +276,54 @@ function startPanorama(renderedDateStr, res, projectId) {
 	// 새로운 날짜로 선택 변경
 	selectedDateStr = renderedDateStr;
 	
-	// 선택된 날짜의 측정 데이터 로드
-	if (datesMeasurementData[selectedDateStr]) {
-		console.log(`Loading measurement data for date: ${selectedDateStr}`);
-		loadMeasurementsForDate(selectedDateStr);
-	} else {
-		console.log(`No measurement data found for date: ${selectedDateStr}`);
-		// 데이터가 없으면 현재 측정 데이터 초기화
-		clearMeasurementLines();
-	}
-	
 	parseConfigJSON(target_dataURL, function (panodata) {
 		var loader = new LocationLoader();
 		loader.loadLocation(panodata.startLocation, function(location) {
-			startComplete(location);
-			
-			// 날짜가 변경되면 새 위치에 대한 측정 데이터 로드
-			if (lastPanoramaUID !== undefined && lastPanoramaUID !== -1) {
-				console.log(`Loading measurement data for location: ${lastPanoramaUID}`);
-				
-				// 새 위치에 대한 측정 데이터 로드
-				const locationKey = `${selectedDateStr}_${lastPanoramaUID}`;
-				if (locationsMeasurementData[locationKey]) {
-					loadMeasurementsForLocation(lastPanoramaUID);
+			// 로딩 완료 시 프로그레스 바 100%로 설정
+			var progressBar = document.getElementById('loadingProgressBar');
+			if (progressBar) {
+				// 기존 인터벌 제거
+				if (window.loadingProgressInterval) {
+					clearInterval(window.loadingProgressInterval);
 				}
+				progressBar.style.width = '100%';
 			}
+			
+			// 0.5초 후에 로딩 화면 숨기기 
+			setTimeout(function() {
+				if (loadingScreen) {
+					loadingScreen.style.display = 'none';
+				}
+				startComplete(location);
+				
+				// scene이 초기화된 후에 측정 데이터 로드
+				if (datesMeasurementData[selectedDateStr]) {
+					console.log(`Loading measurement data for date: ${selectedDateStr}`);
+					loadMeasurementsForDate(selectedDateStr);
+				} else {
+					console.log(`No measurement data found for date: ${selectedDateStr}`);
+					clearMeasurementLines();
+				}
+				
+				// 날짜가 변경되면 새 위치에 대한 측정 데이터 로드
+				if (lastPanoramaUID !== undefined && lastPanoramaUID !== -1) {
+					console.log(`Loading measurement data for location: ${lastPanoramaUID}`);
+					
+					// 새 위치에 대한 측정 데이터 로드
+					const locationKey = `${selectedDateStr}_${lastPanoramaUID}`;
+					if (locationsMeasurementData[locationKey]) {
+						loadMeasurementsForLocation(lastPanoramaUID);
+					}
+				}
+			}, 500);
 		});
 	});
 	
-	// 기존 애니메이션 취소 후 새로 시작
-	if (animationId) {
-		cancelAnimationFrame(animationId);
-		animationId = null;
-	}
-	animate();
+	// 애니메이션 시작
+    if (animationId) {
+        cancelAnimationFrame(animationId);
+    }
+    animationId = requestAnimationFrame(animate);
 }
 
 function Date2DateStr(renderedDate) {
@@ -340,6 +492,10 @@ function updateTargetList() {
  * @param reset if true camera rotates as if it is a start location.
  */
 function transitToLocation(locationIndex, reset) {
+	// 카메라 움직임 계수 초기화
+	lonFactor = 0;
+	latFactor = 0;
+	
 	// 현재 위치의 측정 데이터 저장
 	if (lastPanoramaUID !== undefined && lastPanoramaUID !== -1) {
 		// 위치별 측정 데이터 저장
@@ -407,13 +563,6 @@ function transitToLocation(locationIndex, reset) {
 			
 			// 새 위치의 측정 데이터 로드
 			loadMeasurementsForLocation(location.uid);
-			
-			// 이동 후 애니메이션 루프 초기화
-			if (animationId) {
-				cancelAnimationFrame(animationId);
-				animationId = null;
-			}
-			animate();
 		});
 	}, 50);
 }
@@ -946,6 +1095,9 @@ function onMouseMove(event) {
  */
 function onMouseUp(event) {
 	upEventHandler(event);
+	isUserInteracting = false;
+	lonFactor = 0;
+	latFactor = 0;
 }
 
 /**
@@ -987,6 +1139,9 @@ function onDocumentTouchMove(event) {
  */
 function onDocumentTouchEnd(event) {
 	upEventHandler(event);
+	isUserInteracting = false;
+	lonFactor = 0;
+	latFactor = 0;
 }
 
 /**
@@ -996,69 +1151,10 @@ function onDocumentTouchEnd(event) {
  * @param event input event
  */
 function moveEventHandler(eventX, eventY, event) { 
-    // 마우스 위치 업데이트
-    mouse.x = (eventX / window.innerWidth) * 2 - 1;
-    mouse.y = -(eventY / window.innerHeight) * 2 + 1;
+    // 이벤트 기본 동작 방지
+    event.preventDefault();
     
-    // 측정 모드에서 마우스 커서 업데이트
-    if (isMeasureMode) {
-        // 점 선택 모드가 아닐 때만 측정선 삭제 가능
-        if (!isPointSelectionEnabled) {
-            // 측정 라인 위에 마우스가 있는지 확인
-            const raycaster = new THREE.Raycaster();
-            raycaster.setFromCamera(new THREE.Vector2(mouse.x, mouse.y), camera);
-            
-            // 측정 라인과 레이블 배열 생성
-            const measurementObjects = [...measurementLines3D, ...measurementLabels];
-            
-            // 레이캐스팅으로 마우스 아래 객체 확인
-            const intersects = raycaster.intersectObjects(measurementObjects, true);
-            
-            if (intersects.length > 0) {
-                // 마우스가 측정 라인 위에 있으면 포인터 커서로 변경
-                const hoveredObject = intersects[0].object;
-                if (hoveredObject.userData && (hoveredObject.userData.type === 'measurementLine' || hoveredObject.userData.type === 'measurementLabel')) {
-                    document.body.style.cursor = 'pointer';
-                    return;
-                }
-            }
-        }
-        
-        // 측정 라인 위에 없거나 점 선택 모드일 때
-        if (isPointSelectionEnabled) {
-            // 점 선택 모드에서는 십자선 커서
-            document.body.style.cursor = 'crosshair';
-            
-            // 포인트 인디케이터 표시 및 위치 업데이트
-            const pointIndicator = document.getElementById('pointIndicator');
-            if (pointIndicator) {
-                pointIndicator.style.display = 'block';
-                pointIndicator.style.left = eventX + 'px';
-                pointIndicator.style.top = eventY + 'px';
-            }
-        } else {
-            // 점 선택 모드가 아니면 기본 커서
-            document.body.style.cursor = 'default';
-        }
-    }
-    
-    if (window.isResizing) {
-        return;
-    }
-
-    // Position of toolTips
-    toolTip.style.left = eventX + 20 + "px";
-    toolTip.style.top = eventY + 20 + "px";
-
-    if (isPopupOpen) {
-        return;
-    }
-
-    // 마우스 좌표를 정규화된 좌표로 변환 (0~1)
-    const normalizedX = eventX / window.innerWidth;
-    const normalizedY = eventY / window.innerHeight;
-
-    // 마우스 드래그 중이고 키보드로 제어 중이 아닐 때만 마우스 이동으로 파노라마 제어
+    // 드래그 중인 경우
     if (isUserInteracting === true && event.buttons > 0 && 
         !keyboardControls[37] && !keyboardControls[38] && 
         !keyboardControls[39] && !keyboardControls[40]) {
@@ -1070,51 +1166,60 @@ function moveEventHandler(eventX, eventY, event) {
         
         lastMouseX = eventX;
         lastMouseY = eventY;
-        return; // 드래그 중일 때는 여기서 종료
+       
+        return;
     }
 
     // 드래그 중이 아닐 때만 실행
     if (!event.buttons) {
-        // update the mouse variable
-    mouse.x = (eventX / window.innerWidth) * 2 - 1;
-    mouse.y = -(eventY / window.innerHeight) * 2 + 1;
+        try {
+            // 마우스 좌표를 정규화된 좌표로 변환 (-1 ~ 1)
+            const normalizedX = (eventX / window.innerWidth) * 2 - 1;
+            const normalizedY = -(eventY / window.innerHeight) * 2 + 1;
+            
+            // update the mouse variable
+            mouse.x = normalizedX;
+            mouse.y = normalizedY;
 
-        // find intersections
-        var vector = new THREE.Vector3(mouse.x, mouse.y, 0);
-        vector.unproject(camera);
+            // find intersections
+            var vector = new THREE.Vector3(mouse.x, mouse.y, 0);
+            vector.unproject(camera);
 
-        var ray = new THREE.Raycaster();
-        ray.set(camera.position, vector.sub(camera.position).normalize());
+            var ray = new THREE.Raycaster();
+            ray.set(camera.position, vector.sub(camera.position).normalize());
 
-        var intersects = ray.intersectObjects(targetList, true);
+            var intersects = ray.intersectObjects(targetList, true);
 
-        if (intersects.length > 0) {
-            if (intersects[0].object !== hoverIntersected) {
+            if (intersects.length > 0) {
+                if (intersects[0].object !== hoverIntersected) {
+                    if (hoverIntersected) {
+                        hoverIntersected.material.color.setHex(hoverIntersected.currentHex);
+                    }
+                    hoverIntersected = intersects[0].object;
+
+                    hoverIntersected.currentHex = hoverIntersected.material.color.getHex();
+                    hoverIntersected.material.color.setHex(0x917d4d);
+
+                    if (intersects[0].object.tooltip) {
+                        toolTip.innerHTML = intersects[0].object.tooltip;
+                        toolTip.style.display = "block";
+                    }
+                }
+            } else {
                 if (hoverIntersected) {
                     hoverIntersected.material.color.setHex(hoverIntersected.currentHex);
                 }
-                hoverIntersected = intersects[0].object;
-
-                hoverIntersected.currentHex = hoverIntersected.material.color.getHex();
-                hoverIntersected.material.color.setHex(0x917d4d);
-
-                if (intersects[0].object.tooltip) {
-                    toolTip.innerHTML = intersects[0].object.tooltip;
-                    toolTip.style.display = "block";
+                hoverIntersected = null;
+                
+                // Transition 객체에 마우스가 없을 때만 깊이 정보 표시
+                if (!isMeasureMode) {
+                    showDepthInfo(normalizedX, normalizedY);
                 }
             }
-        } else {
-            if (hoverIntersected) {
-                hoverIntersected.material.color.setHex(hoverIntersected.currentHex);
-            }
-            hoverIntersected = null;
-            
-            // Transition 객체에 마우스가 없을 때만 깊이 정보 표시
-            if (!isMeasureMode) {
-                showDepthInfo(normalizedX, normalizedY);
-            }
-		}
-	}
+        } catch (error) {
+            console.warn('Error in moveEventHandler:', error);
+        }
+    }
 }
 
 /**
@@ -1190,7 +1295,7 @@ function downEventHandler(eventX, eventY, event) {
             return;
         }
     }
-    
+
     // 클릭한 객체 확인 (Transition, Hotspot 등)
     event.preventDefault();
 
@@ -1277,7 +1382,7 @@ function upEventHandler(event) {
                     const distance = prevPoint.vector3D.distanceTo(newPoint.vector3D) / 10; // 스케일 조정
                     
                     // 선 그리기 (3D 벡터 사용)
-                    draw3DMeasurementLine(prevPoint, newPoint, distance);
+                        draw3DMeasurementLine(prevPoint, newPoint, distance);
                 }
                 
                 // 새 점 저장
@@ -1364,12 +1469,10 @@ function showAbout(event) {
  * Update for new frame from Browser.
  */
 function animate() {
-	// 기존 애니메이션 프레임 요청을 취소
+	// 이전 애니메이션 취소하여 중복 실행 방지
 	if (animationId) {
 		cancelAnimationFrame(animationId);
 	}
-	
-	// 새 애니메이션 프레임 요청
 	animationId = requestAnimationFrame(animate);
 	update();
 }
@@ -1384,18 +1487,22 @@ function update() {
 
 	// if popUp is not open
 	if (!isPopupOpen) {
-		// 회전 속도를 일정하게 유지 (lonFactor와 latFactor가 설정된 경우만 적용)
-		if (lonFactor !== 0) {
-			lon = (lon + lonFactor) % 360;
+		// 마우스 드래그가 없는 경우 움직임 계수를 천천히 0으로 줄임
+		if (!isUserInteracting) {
+			lonFactor *= 0.95; // 점진적으로 감소
+			latFactor *= 0.95; // 점진적으로 감소
+			
+			// 아주 작은 값은 0으로 설정 (부동소수점 계산 오류 방지)
+			if (Math.abs(lonFactor) < 0.01) lonFactor = 0;
+			if (Math.abs(latFactor) < 0.01) latFactor = 0;
 		}
 		
-		if (latFactor !== 0) {
-			lat = lat + latFactor;
-		}
-		
-		// 위도(lat) 범위 제한
+		lon = (lon + lonFactor) % 360;
+		lat = lat + latFactor;
+		// console logs: coordinates for starting view of a location
+		//console.log("Camera Target: " + "lat: " + lat + "  lon: " + lon);
+
 		lat = Math.max(-35, Math.min(45, lat));
-		
 		phi = THREE.Math.degToRad(90 - lat);
 		theta = THREE.Math.degToRad(lon);
 		camera.target.x = 195 * Math.sin(phi) * Math.cos(theta);
