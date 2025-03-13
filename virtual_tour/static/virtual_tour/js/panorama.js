@@ -260,9 +260,19 @@ function startPanorama(renderedDateStr, res, projectId) {
 		// 현재 날짜의 측정 데이터 저장
 		saveMeasurementsForCurrentDate();
 		
+		// 현재 날짜의 메모 데이터 저장
+		if (typeof window.saveMemosForCurrentDate === 'function') {
+			window.saveMemosForCurrentDate();
+		}
+		
 		// 현재 위치의 측정 데이터 저장
 		if (lastPanoramaUID !== undefined && lastPanoramaUID !== -1) {
 			saveMeasurementsForCurrentLocation();
+			
+			// 현재 위치의 메모 데이터 저장
+			if (typeof window.saveMemosForCurrentLocation === 'function') {
+				window.saveMemosForCurrentLocation();
+			}
 		}
 	}
 	
@@ -298,22 +308,28 @@ function startPanorama(renderedDateStr, res, projectId) {
 				
 				// scene이 초기화된 후에 측정 데이터 로드
 				if (datesMeasurementData[selectedDateStr]) {
-					console.log(`Loading measurement data for date: ${selectedDateStr}`);
+					// console.log(`Loading measurement data for date: ${selectedDateStr}`);
 					loadMeasurementsForDate(selectedDateStr);
 				} else {
-					console.log(`No measurement data found for date: ${selectedDateStr}`);
+					// console.log(`No measurement data found for date: ${selectedDateStr}`);
 					clearMeasurementLines();
 				}
 				
 				// 날짜가 변경되면 새 위치에 대한 측정 데이터 로드
 				if (lastPanoramaUID !== undefined && lastPanoramaUID !== -1) {
-					console.log(`Loading measurement data for location: ${lastPanoramaUID}`);
+					// console.log(`Loading measurement data for location: ${lastPanoramaUID}`);
 					
 					// 새 위치에 대한 측정 데이터 로드
 					const locationKey = `${selectedDateStr}_${lastPanoramaUID}`;
 					if (locationsMeasurementData[locationKey]) {
 						loadMeasurementsForLocation(lastPanoramaUID);
 					}
+				}
+				
+				// 날짜 변경 후 메모 데이터 로드
+				if (typeof window.loadMemosForCurrentView === 'function') {
+					console.log("Loading memos after date change:", selectedDateStr);
+					window.loadMemosForCurrentView();
 				}
 			}, 500);
 		});
@@ -408,6 +424,11 @@ function init() {
 	initMeasurementUI();
 	initEventListener();
 	calendar = new Calendar();
+	
+	// Initialize memo system
+	if (typeof window.initMemoSystem === 'function') {
+		window.initMemoSystem();
+	}
 	
 	// 키보드 이벤트 리스너 직접 등록
 	setupKeyboardControls();
@@ -507,6 +528,11 @@ function transitToLocation(locationIndex, reset) {
 		}
 	}
 	
+	// Clear memo icons when transitioning
+	if (typeof window.clearMemoIcons === 'function') {
+		window.clearMemoIcons();
+	}
+	
 	if (reset) {
 		lastPanoramaUID = -1;
 	}
@@ -563,6 +589,11 @@ function transitToLocation(locationIndex, reset) {
 			
 			// 새 위치의 측정 데이터 로드
 			loadMeasurementsForLocation(location.uid);
+			
+			// Load memos for current view
+			if (typeof window.loadMemosForCurrentView === 'function') {
+				window.loadMemosForCurrentView();
+			}
 		});
 	}, 50);
 }
@@ -1067,6 +1098,11 @@ function onWindowResize(event) {
 	camera.aspect = window.innerWidth / window.innerHeight;
 	camera.updateProjectionMatrix();
 	renderer.setSize(window.innerWidth, window.innerHeight);
+	
+	// Update memo positions when window is resized
+	if (typeof window.updateMemoIconPositions === 'function') {
+		window.updateMemoIconPositions();
+	}
 }
 
 /**
@@ -1526,6 +1562,11 @@ function update() {
 
 			// console.log("카메라 회전 각도:", THREE.MathUtils.radToDeg(cameraRotation), lon)
         }
+        
+        // Update memo positions during camera movement
+        if (typeof window.updateMemoIconPositions === 'function') {
+            window.updateMemoIconPositions();
+        }
     } else {
 		setMapandNavigationHidden(true);
 		composer.render();
@@ -1634,7 +1675,7 @@ function getDepthAtPoint(x, y) {
     
     // 배열 범위 체크
     if (mapX < 0 || mapX >= depthMap.width || mapY < 0 || mapY >= depthMap.height) {
-        console.log("좌표가 depth map 범위를 벗어남:", mapX, mapY);
+        // console.log("좌표가 depth map 범위를 벗어남:", mapX, mapY);
         return null;
     }
     
@@ -1647,7 +1688,7 @@ function getDepthAtPoint(x, y) {
 function showDepthInfo(x, y) {
     const depth = getDepthAtPoint(x, y);
     if (depth !== null) {
-        console.log(`깊이: ${depth.toFixed(2)}m (좌표: ${x.toFixed(3)}, ${y.toFixed(3)})`);
+        // console.log(`깊이: ${depth.toFixed(2)}m (좌표: ${x.toFixed(3)}, ${y.toFixed(3)})`);
     }
 }
 
@@ -1930,7 +1971,7 @@ function loadMeasurementsForDate(dateStr) {
         });
     }
     
-    console.log(`Loaded measurements for date ${dateStr}: ${measurementLines3D.length} lines, ${measurementLabels.length} labels`);
+    // console.log(`Loaded measurements for date ${dateStr}: ${measurementLines3D.length} lines, ${measurementLabels.length} labels`);
 }
 
 // 측정선 생성 함수 (기존 draw3DMeasurementLine 함수와 내부 로직 동일하나, ID를 받을 수 있도록 수정)
@@ -2681,19 +2722,19 @@ function loadMeasurementsForLocation(locationId) {
     }
     
     const locationKey = `${selectedDateStr}_${locationId}`;
-    console.log(`Loading measurements for location ${locationKey}`);
+    // console.log(`Loading measurements for location ${locationKey}`);
     
     // 먼저 현재 측정 데이터 정리
     clearMeasurementLines();
     
     // 해당 위치의 측정 데이터가 없으면 종료
     if (!locationsMeasurementData[locationKey]) {
-        console.log(`No measurements found for location ${locationKey}`);
+        // console.log(`No measurements found for location ${locationKey}`);
         return;
     }
     
     const data = locationsMeasurementData[locationKey];
-    console.log(`Found ${data.lines.length} lines for location ${locationKey}`);
+    // console.log(`Found ${data.lines.length} lines for location ${locationKey}`);
     
     // 측정선 복원
     if (data.lines && Array.isArray(data.lines)) {
@@ -2752,7 +2793,7 @@ function loadMeasurementsForLocation(locationId) {
         });
     }
     
-    console.log(`Loaded measurements for location ${locationKey}: ${measurementLines3D.length} lines, ${measurementLabels.length} labels`);
+    // console.log(`Loaded measurements for location ${locationKey}: ${measurementLines3D.length} lines, ${measurementLabels.length} labels`);
 }
 
 
