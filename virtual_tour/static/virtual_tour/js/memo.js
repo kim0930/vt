@@ -13,19 +13,19 @@ let isMouseDown = false; // Track if mouse is down
 // Memo types with corresponding icons
 const MEMO_TYPES = {
     "important": {
-        icon: "¡Ú",  // º°Ç¥
+        icon: "ï¿½ï¿½",  // ï¿½ï¿½Ç¥
         color: "#ff5252"
     },
     "completed": {
-        icon: "?",  // Ã¼Å©¸¶Å©
+        icon: "?",  // Ã¼Å©ï¿½ï¿½Å©
         color: "#4caf50"
     },
     "needsCheck": {
-        icon: "?",  // °æ°í
+        icon: "?",  // ï¿½ï¿½ï¿½
         color: "#ff9800"
     },
     "other": {
-        icon: "?",  // ¿øÇü
+        icon: "?",  // ï¿½ï¿½ï¿½ï¿½
         color: "#2196f3"
     }
 };
@@ -198,7 +198,7 @@ function createMemoUI() {
             <div style="display: flex; justify-content: space-between;">
                 <label style="cursor: pointer;">
                     <input type="radio" name="memoType" value="important" checked> 
-                    <span style="font-family: 'Segoe UI Symbol', 'Arial Unicode MS', sans-serif;">¡Ú Important</span>
+                    <span style="font-family: 'Segoe UI Symbol', 'Arial Unicode MS', sans-serif;">ï¿½ï¿½ Important</span>
                 </label>
                 <label style="cursor: pointer;">
                     <input type="radio" name="memoType" value="completed"> 
@@ -1289,9 +1289,8 @@ function saveMemosForCurrentView() {
     const locationId = window.lastPanoramaUID || 'default';
     const dateStr = window.selectedDateStr || window.currentDateStr || 'default';
     
-    // Save both by location and date, and by location only
+    // Save only by location and date combination
     saveMemosForDate(locationId, dateStr);
-    saveMemosForLocation(locationId);
     
     console.log(`Saved ${currentMemos.length} memos for location ${locationId} on date ${dateStr}`);
 }
@@ -1300,15 +1299,6 @@ function saveMemosForCurrentView() {
 function saveMemosForDate(locationId, dateStr) {
     // Create a key for storage by date
     const storageKey = `memos_${locationId}_${dateStr}`;
-    
-    // Save to localStorage (for demo purposes)
-    localStorage.setItem(storageKey, JSON.stringify(currentMemos));
-}
-
-// Save memos for current location (regardless of date)
-function saveMemosForLocation(locationId) {
-    // Create a key for storage by location only
-    const storageKey = `memos_location_${locationId}`;
     
     // Save to localStorage (for demo purposes)
     localStorage.setItem(storageKey, JSON.stringify(currentMemos));
@@ -1335,14 +1325,8 @@ function loadMemosForCurrentView() {
     
     console.log("Loading memos with locationId:", locationId, "dateStr:", dateStr);
     
-    // Try to load memos for the specific date first
-    let memos = loadMemosForDate(locationId, dateStr);
-    
-    // If no memos for this date, try to load memos for the location
-    if (!memos || memos.length === 0) {
-        console.log("No memos found for date, trying location only");
-        memos = loadMemosForLocation(locationId);
-    }
+    // Only load memos for the specific date and location
+    const memos = loadMemosForDate(locationId, dateStr);
     
     if (memos && memos.length > 0) {
         // Use the memos
@@ -1375,22 +1359,6 @@ function loadMemosForDate(locationId, dateStr) {
     return null;
 }
 
-// Load memos for location (regardless of date)
-function loadMemosForLocation(locationId) {
-    // Create a key for storage by location only
-    const storageKey = `memos_location_${locationId}`;
-    
-    // Load from localStorage (for demo purposes)
-    const savedMemos = localStorage.getItem(storageKey);
-    
-    if (savedMemos) {
-        // Parse the JSON data
-        return JSON.parse(savedMemos);
-    }
-    
-    return null;
-}
-
 // Function to save memos when changing date
 function saveMemosForCurrentDate() {
     if (currentMemos.length > 0) {
@@ -1400,12 +1368,11 @@ function saveMemosForCurrentDate() {
     }
 }
 
-// Function to save memos when changing location
+// Function for location change - empty implementation to maintain compatibility
 function saveMemosForCurrentLocation() {
-    if (currentMemos.length > 0) {
-        const locationId = window.lastPanoramaUID || 'default';
-        saveMemosForLocation(locationId);
-    }
+    // This function intentionally left empty
+    // We no longer save memos by location only
+    console.log("saveMemosForCurrentLocation called but ignored - memos now save by date and location only");
 }
 
 // Clear all memo icons from the panorama
