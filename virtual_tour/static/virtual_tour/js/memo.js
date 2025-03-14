@@ -9,6 +9,9 @@ let currentUser = "Anonymous"; // This should be updated with actual user info
 let mouseDownStartTime = 0; // Track when mouse down started
 let mouseDownPosition = { x: 0, y: 0 }; // Track where mouse down started
 let isMouseDown = false; // Track if mouse is down
+let hoveredMemo = null; // Track which memo is currently being hovered
+let lastMousePosition = { x: 0, y: 0 }; // Track mouse position for hover detection
+let hoverTimeout = null; // Timeout for hover detection
 
 // Memo types with corresponding icons
 const MEMO_TYPES = {
@@ -254,6 +257,9 @@ function initMemoEventListeners() {
     const panorama = document.getElementById('panorama');
     const memoForm = document.getElementById('memoForm');
     const memoContent = document.getElementById('memoContent');
+    
+    // Add mouse move listener for hover detection
+    panorama.addEventListener('mousemove', handleMouseMove);
     
     // Track if we're handling a click or a drag
     let isClick = true;
@@ -728,6 +734,17 @@ function saveMemo(e) {
 function editMemo(memo) {
     const memoForm = document.getElementById('memoForm');
     
+    // Hide hover view if it exists
+    const hoverViewId = `memoHoverView_${memo.id}`;
+    const hoverView = document.getElementById(hoverViewId);
+    if (hoverView) {
+        // 애니메이션 효과로 부드럽게 숨김
+        hoverView.style.opacity = '0';
+        setTimeout(() => {
+            hoverView.style.display = 'none';
+        }, 200);
+    }
+    
     // Fill form with existing memo data
     document.getElementById('memoContent').value = memo.content;
     
@@ -822,13 +839,37 @@ function editMemo(memo) {
 function cancelMemoCreation() {
     console.log("Cancel button clicked");
     const memoForm = document.getElementById('memoForm');
+    
+    // Check if we were editing an existing memo
+    const memoId = memoForm.dataset.memoId;
+    const editedMemo = memoId ? currentMemos.find(m => m.id === memoId) : null;
+    
+    // Hide the form
     memoForm.style.display = 'none';
     document.getElementById('memoContent').value = '';
+    
     // Clear memo ID to ensure new memos can be created
     memoForm.dataset.memoId = '';
     
     // Reset save button
     resetSaveButton();
+    
+    // If we were editing a memo and it's currently being hovered, show the hover view again
+    if (editedMemo && hoveredMemo && hoveredMemo.id === editedMemo.id) {
+        const hoverViewId = `memoHoverView_${editedMemo.id}`;
+        const hoverView = document.getElementById(hoverViewId);
+        
+        if (hoverView) {
+            // Show with fade-in effect
+            hoverView.style.display = 'block';
+            setTimeout(() => {
+                hoverView.style.opacity = '1';
+            }, 10);
+        } else {
+            // If hover view doesn't exist, create it
+            showHoverMemoView(editedMemo);
+        }
+    }
 }
 
 // Create memo icon in the panorama
@@ -936,6 +977,45 @@ function updateMemoIconPositions() {
                             memoForm.dataset.memoId = '';
                             // Reset save button
                             resetSaveButton();
+                        }
+                    }
+                }
+            }
+            
+            // Update position of hover view if it exists
+            const hoverViewId = `memoHoverView_${memo.id}`;
+            const hoverView = document.getElementById(hoverViewId);
+            if (hoverView) {
+                if (isInView) {
+                    // Memo is in view, update hover view position
+                    if (hoverView.style.display === 'block') {
+                        let left = screenX + 30;
+                        if (left + 250 > window.innerWidth) {
+                            left = screenX - 250 - 10;
+                        }
+                        
+                        let top = screenY - 60;
+                        if (top < 10) {
+                            top = screenY + 30;
+                        }
+                        if (top + 150 > window.innerHeight) {
+                            top = window.innerHeight - 160;
+                        }
+                        
+                        hoverView.style.left = left + 'px';
+                        hoverView.style.top = top + 'px';
+                    }
+                } else {
+                    // Memo is not in view, hide the hover view
+                    if (hoverView.style.display === 'block') {
+                        hoverView.style.opacity = '0';
+                        setTimeout(() => {
+                            hoverView.style.display = 'none';
+                        }, 200);
+                        
+                        // Reset hover state if needed
+                        if (hoveredMemo && hoveredMemo.id === memo.id) {
+                            hoveredMemo = null;
                         }
                     }
                 }
@@ -1131,6 +1211,18 @@ function showMemoDetails(memo) {
             // Remove memo view from DOM
             memoView.remove();
             
+            // Remove hover view if it exists
+            const hoverViewId = `memoHoverView_${memo.id}`;
+            const hoverView = document.getElementById(hoverViewId);
+            if (hoverView) {
+                hoverView.remove();
+            }
+            
+            // Reset hover state if this was the hovered memo
+            if (hoveredMemo && hoveredMemo.id === memo.id) {
+                hoveredMemo = null;
+            }
+            
             // Remove from array
             currentMemos = currentMemos.filter(m => m.id !== memo.id);
             
@@ -1243,6 +1335,12 @@ function updateMemo(memoId) {
     
     // Reset save button text
     document.getElementById('saveMemoBtn').innerText = 'Save';
+    
+    // Update hover view if this memo is currently being hovered
+    if (hoveredMemo && hoveredMemo.id === memo.id) {
+        // 새로운 방식: 호버 뷰 내용만 업데이트
+        showHoverMemoView(memo);
+    }
     
     // Show updated memo details
     showMemoDetails(memo);
@@ -1396,10 +1494,15 @@ function clearMemoIcons() {
     const memoForm = document.getElementById('memoForm');
     if (memoForm) {
         memoForm.style.display = 'none';
+        memoForm.dataset.memoId = ''; // 메모 ID도 초기화
+        document.getElementById('memoContent').value = ''; // 내용도 초기화
     }
     
-    // Find and remove all memo views
-    document.querySelectorAll('.memo-view').forEach(view => {
+    // Reset hover state and remove hover views
+    hoveredMemo = null;
+    
+    // Find and remove all memo views (both regular and hover views)
+    document.querySelectorAll('.memo-view, .memo-hover-view').forEach(view => {
         view.remove();
     });
 }
@@ -1415,4 +1518,197 @@ window.updateMemoIconPositions = updateMemoIconPositions;
 window.clearMemoIcons = clearMemoIcons;
 window.loadMemosForCurrentView = loadMemosForCurrentView;
 window.saveMemosForCurrentDate = saveMemosForCurrentDate;
-window.saveMemosForCurrentLocation = saveMemosForCurrentLocation; 
+window.saveMemosForCurrentLocation = saveMemosForCurrentLocation;
+
+// Handle mouse move events for hover detection
+function handleMouseMove(event) {
+    // Update last mouse position
+    lastMousePosition.x = event.clientX;
+    lastMousePosition.y = event.clientY;
+    
+    // If we're not in memo mode, check for hover
+    if (!isMemoMode) {
+        // If we already have a timeout for hover detection, clear it
+        if (hoverTimeout) {
+            clearTimeout(hoverTimeout);
+        }
+        
+        // Set a small timeout to reduce excessive calculations
+        hoverTimeout = setTimeout(() => {
+            checkForMemoHover(event);
+        }, 50);
+    }
+}
+
+// Check if mouse is hovering over a memo sprite
+function checkForMemoHover(event) {
+    // Don't do hover detection if we're dragging or in memo mode
+    if (isMouseDown || isMemoMode) return;
+    
+    const panorama = document.getElementById('panorama');
+    const rect = panorama.getBoundingClientRect();
+    
+    // Convert mouse coordinates to normalized device coordinates (-1 to +1)
+    const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    
+    // Create raycaster
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(new THREE.Vector2(x, y), window.camera);
+    
+    // Get all memo sprites
+    const sprites = currentMemos.map(memo => memo.sprite).filter(sprite => sprite);
+    
+    // Check for intersections
+    const intersects = raycaster.intersectObjects(sprites, true);
+    
+    if (intersects.length > 0) {
+        // Find the corresponding memo
+        const hoverSprite = intersects[0].object;
+        const newHoveredMemo = currentMemos.find(memo => memo.sprite === hoverSprite);
+        
+        if (newHoveredMemo) {
+            // 이전과 다른 메모를 호버하는 경우에만 처리
+            if (hoveredMemo !== newHoveredMemo) {
+                // 이전에 호버한 메모가 있고 활성화된 메모가 아니라면 닫기
+                if (hoveredMemo && !isActiveMemo(hoveredMemo)) {
+                    hideHoverMemoView(hoveredMemo);
+                }
+                
+                // 새로 호버한 메모가 이미 활성화된 메모가 아닐 때만 표시
+                if (!isActiveMemo(newHoveredMemo)) {
+                    showHoverMemoView(newHoveredMemo);
+                }
+                
+                // 현재 호버 중인 메모 업데이트
+                hoveredMemo = newHoveredMemo;
+            }
+        }
+    } else {
+        // 마우스가 어떤 메모 위에도 없을 때
+        if (hoveredMemo && !isActiveMemo(hoveredMemo)) {
+            hideHoverMemoView(hoveredMemo);
+        }
+        hoveredMemo = null;
+    }
+}
+
+// Check if a memo is currently active (showing details from click)
+function isActiveMemo(memo) {
+    return activeMemo && activeMemo.id === memo.id;
+}
+
+// Show memo detail view when hovering
+function showHoverMemoView(memo) {
+    const hoverViewId = `memoHoverView_${memo.id}`;
+    
+    // Check if the hover view already exists
+    let hoverView = document.getElementById(hoverViewId);
+    
+    // Format dates
+    const createdDate = new Date(memo.createdAt).toLocaleString();
+    
+    // HTML 내용 준비
+    const hoverContent = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+            <h4 style="margin: 0; color: ${MEMO_TYPES[memo.type].color};">${MEMO_TYPES[memo.type].icon} ${capitalizeFirstLetter(memo.type)}</h4>
+            <small style="color: #aaa;">${memo.creator}</small>
+        </div>
+        <p style="margin: 5px 0; max-height: 80px; overflow: hidden; text-overflow: ellipsis;">${memo.content}</p>
+        <div style="font-size: 0.8em; color: #aaa; text-align: right;">
+            ${createdDate}
+        </div>
+    `;
+    
+    if (!hoverView) {
+        // 호버 뷰가 없으면 새로 생성
+        hoverView = document.createElement('div');
+        hoverView.id = hoverViewId;
+        hoverView.className = 'memo-hover-view';
+        hoverView.style.display = 'none';
+        hoverView.style.position = 'fixed';
+        hoverView.style.width = '250px';
+        hoverView.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+        hoverView.style.color = 'white';
+        hoverView.style.padding = '10px';
+        hoverView.style.borderRadius = '6px';
+        hoverView.style.zIndex = '900'; // 활성 메모 뷰보다 낮은 z-index
+        hoverView.style.boxShadow = '0 0 8px rgba(0, 0, 0, 0.4)';
+        hoverView.style.transition = 'opacity 0.2s ease-in-out';
+        hoverView.style.opacity = '0';
+        document.getElementById('panorama').appendChild(hoverView);
+    }
+    
+    // 호버 뷰 내용 업데이트 (새로 생성하든 기존 것이든)
+    hoverView.innerHTML = hoverContent;
+    
+    // Calculate position for hover view
+    updateHoverViewPosition(memo);
+    
+    // Show with fade-in effect
+    hoverView.style.display = 'block';
+    setTimeout(() => {
+        hoverView.style.opacity = '1';
+    }, 10);
+}
+
+// Hide hover view for a memo
+function hideHoverMemoView(memo) {
+    const hoverViewId = `memoHoverView_${memo.id}`;
+    const hoverView = document.getElementById(hoverViewId);
+    
+    if (hoverView) {
+        // Add fade-out effect
+        hoverView.style.opacity = '0';
+        
+        // Remove after animation completes
+        setTimeout(() => {
+            hoverView.style.display = 'none';
+        }, 200);
+    }
+}
+
+// Update position of hover view based on memo position
+function updateHoverViewPosition(memo) {
+    const hoverViewId = `memoHoverView_${memo.id}`;
+    const hoverView = document.getElementById(hoverViewId);
+    
+    if (!hoverView) return;
+    
+    // Calculate position for memo hover view
+    const vector = new THREE.Vector3(
+        memo.position.x,
+        memo.position.y,
+        memo.position.z
+    );
+    vector.project(window.camera);
+    
+    // Convert to screen coordinates
+    const x = (vector.x + 1) / 2 * window.innerWidth;
+    const y = (-vector.y + 1) / 2 * window.innerHeight;
+    
+    // Position the view near the projected point - slightly to the right
+    let left = x + 30;
+    if (left + 250 > window.innerWidth) {
+        left = x - 250 - 10;
+    }
+    
+    let top = y - 60; // Position the view above the icon
+    if (top < 10) {
+        top = y + 30; // If too high, position below the icon
+    }
+    if (top + 150 > window.innerHeight) {
+        top = window.innerHeight - 160; // Ensure it stays within the viewport
+    }
+    
+    // Use fixed positioning
+    hoverView.style.left = left + 'px';
+    hoverView.style.top = top + 'px';
+}
+
+// Update positions of all hover views
+function updateHoverViewPositions() {
+    if (hoveredMemo) {
+        updateHoverViewPosition(hoveredMemo);
+    }
+} 
