@@ -104,11 +104,11 @@ function startVTProject(dataURL, res, projectId) {
 			}
 		});
 		init();
-		startPanorama(selectedDateStr, res, projectId)
+		startPanorama(selectedDateStr, res)
 	});
 }
 
-function startPanorama(renderedDateStr, res, projectId) {
+function startPanorama(renderedDateStr, res) {
 	/*
 	renderedDate: Date()
 	*/
@@ -255,7 +255,8 @@ function startPanorama(renderedDateStr, res, projectId) {
 	}
 	
 	// 날짜가 변경되면 현재 측정 데이터 저장 
-	if (selectedDateStr && projectId && selectedDateStr !== renderedDateStr) {
+    console.log("selectedDateStr, selectedDateStr, renderedDateStr",  selectedDateStr, selectedDateStr, renderedDateStr)
+	if (selectedDateStr && selectedDateStr !== renderedDateStr) {
 		console.log(`날짜 변경 감지: ${selectedDateStr} -> ${renderedDateStr}`);
 		// 현재 날짜의 측정 데이터 저장
 		saveMeasurementsForCurrentDate();
@@ -462,9 +463,16 @@ function startComplete(location) {
 	var panoScene = new THREE.Scene();
 	panoScene.add(location);
 	scene = panoScene;
-	var cts = location.cameraTargets;
-	lat = cts[-1].lat;
-	lon = cts[-1].lon;
+	
+    if (window.multiViewExitLat !== undefined && window.multiViewExitLon !== undefined) {
+        window.lat = window.multiViewExitLat;
+        window.lon = window.multiViewExitLon;
+    } else {var cts = location.cameraTargets;
+        lat = cts[-1].lat;
+        lon = cts[-1].lon;
+    }
+
+
 	lastPanoramaUID = location.uid;
 	mapUid = location.mapUid;
 	updateSceneSwitchButton();
@@ -1536,7 +1544,7 @@ function update() {
 		lon = (lon + lonFactor) % 360;
 		lat = lat + latFactor;
 		// console logs: coordinates for starting view of a location
-		//console.log("Camera Target: " + "lat: " + lat + "  lon: " + lon);
+		// console.log("Camera Target: " + "lat: " + lat + "  lon: " + lon);
 
 		lat = Math.max(-35, Math.min(45, lat));
 		phi = THREE.Math.degToRad(90 - lat);
@@ -1568,8 +1576,8 @@ function update() {
             window.updateMemoIconPositions();
         }
     } else {
-		setMapandNavigationHidden(true);
-		composer.render();
+		// setMapandNavigationHidden(true);
+		// composer.render();
 	}
 }
 

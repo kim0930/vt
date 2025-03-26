@@ -157,7 +157,7 @@ function createMemoUI() {
     
     const memoModeBtn = document.createElement('div');
     memoModeBtn.id = 'memoModeBtn';
-    memoModeBtn.innerHTML = '?';
+    memoModeBtn.innerHTML = '📝';
     memoModeBtn.style.cursor = 'pointer';
     memoModeBtn.style.padding = '5px';
     memoModeBtn.style.transition = 'all 0.3s ease';
@@ -166,7 +166,7 @@ function createMemoUI() {
     
     const memoModeExitBtn = document.createElement('div');
     memoModeExitBtn.id = 'memoModeExitBtn';
-    memoModeExitBtn.innerHTML = '?';
+    memoModeExitBtn.innerHTML = '📝';
     memoModeExitBtn.style.display = 'none';
     memoModeExitBtn.style.backgroundColor = 'rgba(33, 150, 243, 0.3)';
     memoModeExitBtn.style.padding = '5px';
@@ -932,6 +932,9 @@ function updateMemoIconPositions() {
     
     const memoForm = document.getElementById('memoForm');
     
+    // 아무 메모가 없으면 처리할 필요 없음
+    if (currentMemos.length === 0) return;
+    
     currentMemos.forEach(memo => {
         if (memo.sprite) {
             // Convert 3D position to screen coordinates
@@ -958,7 +961,7 @@ function updateMemoIconPositions() {
             memo.sprite.scale.set(scale, scale, 1);
             
             // If this memo's form is visible, update its position
-            if (memoForm.style.display === 'block') {
+            if (memoForm && memoForm.style && memoForm.style.display === 'block') {
                 const formMemoId = memoForm.dataset.memoId;
                 if (formMemoId === memo.id || (!formMemoId && memoForm.dataset.vector3D)) {
                     const formVector3D = JSON.parse(memoForm.dataset.vector3D);
@@ -985,7 +988,7 @@ function updateMemoIconPositions() {
             // Update position of hover view if it exists
             const hoverViewId = `memoHoverView_${memo.id}`;
             const hoverView = document.getElementById(hoverViewId);
-            if (hoverView) {
+            if (hoverView && hoverView.style) {
                 if (isInView) {
                     // Memo is in view, update hover view position
                     if (hoverView.style.display === 'block') {
@@ -1024,7 +1027,7 @@ function updateMemoIconPositions() {
             // Update position of memo detail view if it exists and is visible
             const memoViewId = `memoView_${memo.id}`;
             const memoView = document.getElementById(memoViewId);
-            if (memoView) {
+            if (memoView && memoView.style) {
                 if (isInView) {
                     // Memo is in view, update position
                     if (memoView.style.display === 'block') {
@@ -1211,18 +1214,6 @@ function showMemoDetails(memo) {
             // Remove memo view from DOM
             memoView.remove();
             
-            // Remove hover view if it exists
-            const hoverViewId = `memoHoverView_${memo.id}`;
-            const hoverView = document.getElementById(hoverViewId);
-            if (hoverView) {
-                hoverView.remove();
-            }
-            
-            // Reset hover state if this was the hovered memo
-            if (hoveredMemo && hoveredMemo.id === memo.id) {
-                hoveredMemo = null;
-            }
-            
             // Remove from array
             currentMemos = currentMemos.filter(m => m.id !== memo.id);
             
@@ -1338,7 +1329,7 @@ function updateMemo(memoId) {
     
     // Update hover view if this memo is currently being hovered
     if (hoveredMemo && hoveredMemo.id === memo.id) {
-        // 새로운 방식: 호버 뷰 내용만 업데이트
+        // 호버 뷰 내용만 업데이트
         showHoverMemoView(memo);
     }
     
@@ -1512,14 +1503,6 @@ function capitalizeFirstLetter(string) {
     return string.charAt(0).toUpperCase() + string.slice(1);
 }
 
-// Export functions for use in panorama.js
-window.initMemoSystem = initMemoSystem;
-window.updateMemoIconPositions = updateMemoIconPositions;
-window.clearMemoIcons = clearMemoIcons;
-window.loadMemosForCurrentView = loadMemosForCurrentView;
-window.saveMemosForCurrentDate = saveMemosForCurrentDate;
-window.saveMemosForCurrentLocation = saveMemosForCurrentLocation;
-
 // Handle mouse move events for hover detection
 function handleMouseMove(event) {
     // Update last mouse position
@@ -1600,6 +1583,8 @@ function isActiveMemo(memo) {
 
 // Show memo detail view when hovering
 function showHoverMemoView(memo) {
+    console.log("Showing hover view for memo:", memo.id); // 디버깅용
+    
     const hoverViewId = `memoHoverView_${memo.id}`;
     
     // Check if the hover view already exists
@@ -1706,9 +1691,10 @@ function updateHoverViewPosition(memo) {
     hoverView.style.top = top + 'px';
 }
 
-// Update positions of all hover views
-function updateHoverViewPositions() {
-    if (hoveredMemo) {
-        updateHoverViewPosition(hoveredMemo);
-    }
-} 
+// Export functions for use in panorama.js
+window.initMemoSystem = initMemoSystem;
+window.updateMemoIconPositions = updateMemoIconPositions;
+window.clearMemoIcons = clearMemoIcons;
+window.loadMemosForCurrentView = loadMemosForCurrentView;
+window.saveMemosForCurrentDate = saveMemosForCurrentDate;
+window.saveMemosForCurrentLocation = saveMemosForCurrentLocation; 

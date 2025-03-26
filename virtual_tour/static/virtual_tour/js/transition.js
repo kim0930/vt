@@ -52,7 +52,7 @@ class Transition extends THREE.Mesh {
 
         this.position.set(parameters.position.x, parameters.position.y, parameters.position.z);
 
-        // Å¬¸¯ ÀÌº¥Æ®¸¦ À§ÇÑ userData ¼³Á¤
+        // Å¬ï¿½ï¿½ ï¿½Ìºï¿½Æ®ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ userData ï¿½ï¿½ï¿½ï¿½
         this.userData.isClickable = true;
     };
 	
