@@ -9,6 +9,7 @@ let mainPanoramaContainer = null; // 원래 파노라마 컨테이너
 let originalPanoramaParent = null; // 원래 파노라마의 부모 요소
 let isInitialized = false; // 초기화 여부를 추적하는 플래그
 let dateStr = ''; // 전역 dateStr 변수 추가
+let TransitionClass = null; // Transition 클래스 참조를 다른 이름으로 저장
 
 // 다중 뷰어 초기화 함수
 function initMultiView() {
@@ -20,6 +21,31 @@ function initMultiView() {
     
     console.log("다중 뷰어 기능 초기화 중...");
     isInitialized = true;
+    
+    // Transition 클래스 참조 저장
+    if (typeof window.Transition !== 'undefined') {
+        TransitionClass = window.Transition;
+        console.log("Transition 클래스 참조 저장 완료");
+    } else {
+        console.warn("Transition 클래스를 찾을 수 없습니다. transition 클릭이 작동하지 않을 수 있습니다.");
+    }
+
+    // transition 커스텀 이벤트 리스너 등록
+    window.addEventListener('locationTransition', function(event) {
+        console.log('locationTransition 이벤트 수신:', event.detail);
+        if (event.detail && event.detail.targetLocation !== undefined) {
+            // 현재 활성화된 뷰어 찾기
+            const viewerIndex = findActiveViewerIndex(event);
+            
+            if (viewerIndex >= 0) {
+                console.log(`뷰어 ${viewerIndex}에서 위치 전환 이벤트 감지`);
+                // 약간의 지연 후 전환 처리
+                setTimeout(() => {
+                    startPanoramaInviewer(dateStr, event.detail.targetLocation, viewerIndex);
+                }, 300);
+            }
+        }
+    });
 
     // UI 요소 참조
     const multiViewToggle = _('multiview-toggle');
@@ -27,15 +53,7 @@ function initMultiView() {
     const syncViewsToggle = _('sync-views-toggle');
     const addViewBtn = _('add-view-btn');
     const multiViewContainer = _('multiview-container');
-    const multiViewGrid = _('multiview-grid');
-    
-    // 요소가 없으면 오류 기록
-    if (!multiViewToggle) console.error("multiViewToggle 요소를 찾을 수 없습니다");
-    if (!multiViewControls) console.error("multiViewControls 요소를 찾을 수 없습니다");
-    if (!syncViewsToggle) console.error("syncViewsToggle 요소를 찾을 수 없습니다");
-    if (!addViewBtn) console.error("addViewBtn 요소를 찾을 수 없습니다");
-    if (!multiViewContainer) console.error("multiViewContainer 요소를 찾을 수 없습니다");
-    if (!multiViewGrid) console.error("multiViewGrid 요소를 찾을 수 없습니다");
+    // const multiViewGrid = _('multiview-grid');
     
     // 메인 파노라마 요소 참조
     mainPanoramaContainer = _('panorama');
@@ -44,7 +62,6 @@ function initMultiView() {
     // 다중 뷰어 토글 버튼 이벤트 리스너
     multiViewToggle.addEventListener('click', function() {
         isMultiViewMode = !isMultiViewMode;
-        console.log("다중 뷰어 모드:", isMultiViewMode ? "활성화" : "비활성화");
         
         if (isMultiViewMode) {
             // 다중 뷰어 모드 활성화
@@ -72,7 +89,6 @@ function initMultiView() {
             
             // 첫 번째 뷰어에 기존 파노라마 이동
             if (activeViews.length === 0) {
-                console.log("첫 번째 뷰어 설정 및 두 번째 뷰어 자동 추가 호출");
                 addNewView();
                 addNewView();
             }
@@ -132,13 +148,20 @@ function initMultiView() {
     });
 
     // 뷰 동기화 토글 이벤트 리스너
-    syncViewsToggle.addEventListener('change', function() {
-        isSyncViewsEnabled = syncViewsToggle.checked;
+    syncViewsToggle.addEventListener('click', function() {
+        isSyncViewsEnabled = !isSyncViewsEnabled;
         console.log("뷰 동기화 " + (isSyncViewsEnabled ? "활성화" : "비활성화"));
         
+        // 버튼 스타일 업데이트
         if (isSyncViewsEnabled) {
+            syncViewsToggle.style.background = 'rgba(33, 150, 243, 0.7)';
+            syncViewsToggle.style.boxShadow = '0 0 8px rgba(33, 150, 243, 0.5)';
+            // syncViewsToggle.textContent = '동기화';
             synchronizeAllViews();
         } else {
+            syncViewsToggle.style.background = 'rgba(0, 0, 0, 0.5)';
+            syncViewsToggle.style.boxShadow = 'none';
+            // syncViewsToggle.textContent = '동기화';
             desynchronizeViews();
         }
     });
@@ -268,35 +291,35 @@ function addMapToViewer(panoramaView, index) {
         }
     });
     
-    // 맵 클릭 이벤트 추가 (스팟 위치 이동)
-    mapImg.addEventListener('click', function(e) {
-        // 맵 이미지 내에서의 상대적 위치 (퍼센트) 계산
-        const rect = mapImg.getBoundingClientRect();
-        const x = (e.clientX - rect.left) / rect.width;
-        const y = (e.clientY - rect.top) / rect.height;
+    // // 맵 클릭 이벤트 추가 (스팟 위치 이동)
+    // mapImg.addEventListener('click', function(e) {
+    //     // 맵 이미지 내에서의 상대적 위치 (퍼센트) 계산
+    //     const rect = mapImg.getBoundingClientRect();
+    //     const x = (e.clientX - rect.left) / rect.width;
+    //     const y = (e.clientY - rect.top) / rect.height;
         
-        // 다른 창도 동기화할지 확인
-        const syncViews = isSyncViewsEnabled;
+    //     // 다른 창도 동기화할지 확인
+    //     const syncViews = isSyncViewsEnabled;
         
-        // 스팟 위치 표시 (현재 뷰어만)
-        updateSpotPosition(spotContainer, x, y);
+    //     // 스팟 위치 표시 (현재 뷰어만)
+    //     updateSpotPosition(spotContainer, x, y);
         
-        // 현재 위치 정보 기록
-        console.log(`맵 클릭: x=${x.toFixed(2)}, y=${y.toFixed(2)}, 뷰 인덱스: ${index}, 동기화: ${syncViews ? "켜짐" : "꺼짐"}`);
+    //     // 현재 위치 정보 기록
+    //     console.log(`맵 클릭: x=${x.toFixed(2)}, y=${y.toFixed(2)}, 뷰 인덱스: ${index}, 동기화: ${syncViews ? "켜짐" : "꺼짐"}`);
         
-        // 위치 이동 처리 (실제 로직은 애플리케이션에 따라 다를 수 있음)
-        if (typeof window.moveToLocationByCoords === 'function') {
-            // 기존 애플리케이션의 위치 이동 함수 호출
-            window.moveToLocationByCoords(x, y);
-        } else {
-            console.log("moveToLocationByCoords 함수를 찾을 수 없습니다.");
-        }
+    //     // 위치 이동 처리 (실제 로직은 애플리케이션에 따라 다를 수 있음)
+    //     if (typeof window.moveToLocationByCoords === 'function') {
+    //         // 기존 애플리케이션의 위치 이동 함수 호출
+    //         window.moveToLocationByCoords(x, y);
+    //     } else {
+    //         console.log("moveToLocationByCoords 함수를 찾을 수 없습니다.");
+    //     }
         
-        // 뷰 동기화가 활성화된 경우에만 다른 맵의 스팟도 업데이트
-        if (syncViews) {
-            updateAllMapSpots(x, y, index);
-        }
-    });
+    //     // 뷰 동기화가 활성화된 경우에만 다른 맵의 스팟도 업데이트
+    //     if (syncViews) {
+    //         updateAllMapSpots(x, y, index);
+    //     }
+    // });
     
     // 드래그하여 맵 위치 이동 기능 구현
     let isDragging = false;
@@ -381,7 +404,7 @@ function addMapToViewer(panoramaView, index) {
     console.log(`맵 컨테이너 복제 및 추가 완료 (인덱스: ${index})`);
     
     // 초기 현재 위치 스팟 표시
-    updateInitialSpotPosition(spotContainer, index);
+    // updateInitialSpotPosition(spotContainer, index);
     
     return mapClone;
 }
@@ -512,7 +535,7 @@ function addNewView() {
     // 맵 컨테이너 추가
     addMapToViewer(panoramaClone, viewIndex);
     
-    const currentDate = window.selectedDateStr || window.currentDateStr;
+    const currentDate = window.selectedDateStr;
     
     // 위치 선택을 위한 로직
     // 주요 위치를 다른 뷰어에 표시하는 시나리오를 위해 기존 위치와 다른 위치를 선택
@@ -654,23 +677,23 @@ function initNewPanorama(containerId, currentDate, currentLocation) {
     const viewerIndex = containerId.split('-').pop();
     
     // 현재 선택된 위치 가져오기
-    const locationIndex = currentLocation || window.currentLocation || window.lastPanoramaUID;
+    const locationIndex = currentLocation || window.lastPanoramaUID;
     
     // 현재 선택된 날짜 가져오기
-    const initialDateStr = currentDate || window.selectedDateStr || window.currentDateStr;
+    const initialDateStr = currentDate
     dateStr = initialDateStr; // 전역 dateStr 변수 업데이트
     
     // Three.js 초기화를 위한 준비
-    const viewerCamera = new THREE.PerspectiveCamera(60, panoramaView.clientWidth / panoramaView.clientHeight, 1, 200);
+    let viewerCamera = new THREE.PerspectiveCamera(60, panoramaView.clientWidth / panoramaView.clientHeight, 1, 200);
     viewerCamera.target = new THREE.Vector3(0, 0, 1);
     
     // 렌더러 생성
-    const viewerRenderer = new THREE.WebGLRenderer({ antialias: true });
+    let viewerRenderer = new THREE.WebGLRenderer({ antialias: true });
     viewerRenderer.setSize(panoramaView.clientWidth, panoramaView.clientHeight);
     panoramaView.appendChild(viewerRenderer.domElement);
     
     // 씬 생성
-    const viewerScene = new THREE.Scene();
+    let viewerScene = new THREE.Scene();
     
     // 날짜 탐색 컨트롤 추가
     const dateNav = document.createElement('div');
@@ -829,161 +852,7 @@ function initNewPanorama(containerId, currentDate, currentLocation) {
             loadingIndicator.style.display = 'none';
         }, 1000); // 최소한의 로딩 시간을 보장하기 위해 약간의 지연 추가
     }
-    
-    // 날짜 변경 함수
-    function loadPanoramaForDate(dateStr, locationId, viewerIdx) {
-        // JSON URL 찾기 - panorama.js와 정확히 동일한 방식 사용
-        const jsonUrl = window.find_dataURL(dateStr);
-        if (!jsonUrl) {
-            console.error(`${dateStr} 날짜의 JSON URL을 찾을 수 없습니다`);
-            return;
-        }
-        
-        // panorama.js와 동일한 방식으로 URL 구성
-        // 참고: panorama.js의 startPanorama 함수에서는 target_dataURL = datesJsonUrl + target_dataURL 방식 사용
-        const fullJsonUrl = window.datesJsonUrl + jsonUrl;
-        
-        console.log(`${viewerIdx}번 뷰어의 날짜 변경 정보:`, { 
-            dateStr, 
-            locationId, 
-            jsonUrl,
-            datesJsonUrl: window.datesJsonUrl,
-            fullJsonUrl
-        });
-        
-        // 기존 리소스 정리
-        if (panoramaView.viewerInstance) {
-            panoramaView.viewerInstance.destroy();
-        }
-        
-        // 캐시 방지를 위한 타임스탬프 추가 (parseConfigJSON 함수 참조)
-        const nocacheUrl = fullJsonUrl + (fullJsonUrl.includes('?') ? '&' : '?') + 'v=' + new Date().getTime();
-        
-        console.log(`${viewerIdx}번 뷰어 최종 JSON 로드 URL:`, nocacheUrl);
-        
-        // JSON 파싱 및 파노라마 로드
-        fetch(nocacheUrl)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP 오류: ${response.status} - ${nocacheUrl}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                // 위치 정보 찾기
-                const location = data.locations.find(loc => loc.uid === locationId);
-                if (!location) {
-                    throw new Error(`위치 ID(${locationId})에 해당하는 위치를 찾을 수 없습니다`);
-                }
-                
-                // 이미지 URL 설정
-                const imgUrl = location.image.default;
-                // panorama.js와 동일한 방식으로 URL 구성
-                const fullImgUrl = window.datesJsonUrl + imgUrl;
-                
-                console.log(`${viewerIdx}번 뷰어 날짜 변경: ${dateStr}, 위치: ${locationId}, 이미지: ${fullImgUrl}`);
-                
-                // 텍스처 로드 및 새 파노라마 생성
-                const textureLoader = new THREE.TextureLoader();
-                return new Promise((resolve, reject) => {
-                    textureLoader.load(
-                        fullImgUrl,
-                        texture => resolve({ texture, location, data }),
-                        xhr => {
-                            const progress = (xhr.loaded / xhr.total * 100).toFixed(0);
-                            loadingIndicator.innerHTML = `파노라마 로딩 중... ${progress}%`;
-                        },
-                        error => reject(error)
-                    );
-                });
-            })
-            .then(({ texture, location, data }) => {
-                // 로딩 표시기 숨기기
-                loadingIndicator.style.display = 'none';
-                
-                // 새 파노라마 생성
-                const geometry = new THREE.SphereGeometry(200, 50, 30);
-                geometry.applyMatrix4(new THREE.Matrix4().makeScale(-1, 1, 1));
-                
-                const material = new THREE.MeshBasicMaterial({
-                    map: texture
-                });
-                
-                const mesh = new THREE.Mesh(geometry, material);
-                
-                // 씬 초기화
-                while (viewerScene.children.length > 0) {
-                    viewerScene.remove(viewerScene.children[0]);
-                }
-                
-                viewerScene.add(mesh);
-                
-                // 뷰어 상태 업데이트
-                viewerState.lat = location.cameraTargets && location.cameraTargets[-1] ? 
-                                location.cameraTargets[-1].lat : 0;
-                viewerState.lon = location.cameraTargets && location.cameraTargets[-1] ? 
-                                location.cameraTargets[-1].lon : 0;
-                
-                // 뷰어 정보 업데이트
-                const infoLabel = panoramaView.querySelector('.viewer-info-label');
-                if (infoLabel) {
-                    infoLabel.textContent = `위치: ${location.uid}, 날짜: ${dateStr}`;
-                }
-                
-                // 새 날짜 정보 저장
-                panoramaView.viewerInstance.dateStr = dateStr;
-                
-                // 동기화 기능이 켜져 있을 때만 맵 이미지 업데이트
-                if (isSyncViewsEnabled) {
-                    updateMapForViewer(viewerIdx, data, location);
-                    showToast(`모든 뷰어의 맵이 동기화되었습니다.`);
-                } else {
-                    // 현재 뷰어의 맵만 업데이트
-                    const mapContainer = document.getElementById(`mapContainer-view-${viewerIdx}`);
-                    if (mapContainer) {
-                        const mapImg = document.getElementById(`mapImage-view-${viewerIdx}`);
-                        if (mapImg && matchingMap && matchingMap.image) {
-                            mapImg.src = window.datesJsonUrl + matchingMap.image;
-                        }
-                    }
-                }
-                
-                // 로딩 성공 토스트 메시지
-                showToast(`${viewerIdx}번 뷰어의 날짜가 ${dateStr}로 변경되었습니다`);
-            })
-            .catch(error => {
-                console.error('파노라마 로드 중 오류 발생:', error);
-                loadingIndicator.innerHTML = '파노라마 로딩 실패';
-                loadingIndicator.style.backgroundColor = 'rgba(255, 0, 0, 0.7)';
-                
-                // 오류 발생 토스트 메시지
-                showToast(`날짜 변경 실패: ${error.message}`, 5000);
-            });
-    }
-    
-    // 맵 업데이트 함수
-    function updateMapForViewer(viewerIdx, data, location) {
-        const mapContainer = document.getElementById(`mapContainer-view-${viewerIdx}`);
-        if (!mapContainer) return;
-        
-        const mapImg = document.getElementById(`mapImage-view-${viewerIdx}`);
-        if (!mapImg) return;
-        
-        // 해당 위치의 맵 찾기
-        const matchingMap = data.maps.find(map => map.uid === location.mapUid);
-        if (matchingMap && matchingMap.image) {
-            // panorama.js와 동일한 방식으로 URL 구성
-            mapImg.src = window.datesJsonUrl + matchingMap.image;
-            console.log(`${viewerIdx}번 뷰어 맵 이미지 업데이트:`, mapImg.src);
-        }
-        
-        // 스팟 위치 업데이트
-        const spotContainer = document.getElementById(`spot-container-view-${viewerIdx}`);
-        if (spotContainer && location.mapSpot) {
-            updateSpotPosition(spotContainer, location.mapSpot.x, location.mapSpot.y);
-        }
-    }
-    
+            
     // 캘린더 토글 기능
     calendarToggle.addEventListener('click', function() {
         // 캘린더 표시 상태 토글
@@ -997,8 +866,23 @@ function initNewPanorama(containerId, currentDate, currentLocation) {
     });
     
     // 이전 날짜 버튼 이벤트
-    prevDateBtn.addEventListener('click', function() {
-        const currentIndex = findDateIndex(dateStr);
+    prevDateBtn.addEventListener('click', function(event) {
+        // 이벤트가 발생한 요소
+        const targetElement = event.target;
+        
+        // 가장 가까운 panorama-view 컨테이너 찾기
+        const panoramaView = targetElement.closest('[id^="panorama-view-"]');
+        
+        if (panoramaView) {
+            // ID에서 뷰어 인덱스 추출
+            const viewerIndex = panoramaView.id.split('-').pop();
+            console.log(targetElement, `뷰어 ${viewerIndex}에서 클릭 발생`);
+            
+            // 해당 뷰어의 인스턴스 참조
+            renderedDateStr = panoramaView.viewerInstance.dateStr;
+        }
+
+        const currentIndex = findDateIndex(renderedDateStr);
         if (currentIndex > 0) {
             const prevDate = window.panoramaDates[currentIndex - 1].date;
             currentDateSpan.textContent = prevDate;
@@ -1008,8 +892,24 @@ function initNewPanorama(containerId, currentDate, currentLocation) {
     });
     
     // 다음 날짜 버튼 이벤트
-    nextDateBtn.addEventListener('click', function() {
-        const currentIndex = findDateIndex(dateStr);
+    nextDateBtn.addEventListener('click', function(event) {
+
+        // 이벤트가 발생한 요소
+        const targetElement = event.target;
+        
+        // 가장 가까운 panorama-view 컨테이너 찾기
+        const panoramaView = targetElement.closest('[id^="panorama-view-"]');
+        
+        if (panoramaView) {
+            // ID에서 뷰어 인덱스 추출
+            const viewerIndex = panoramaView.id.split('-').pop();
+            console.log(targetElement, `뷰어 ${viewerIndex}에서 클릭 발생`);
+            
+            // 해당 뷰어의 인스턴스 참조
+            renderedDateStr = panoramaView.viewerInstance.dateStr;
+        }
+        
+        const currentIndex = findDateIndex(renderedDateStr);
         if (currentIndex !== -1 && currentIndex < window.panoramaDates.length - 1) {
             const nextDate = window.panoramaDates[currentIndex + 1].date;
             currentDateSpan.textContent = nextDate;
@@ -1061,6 +961,134 @@ function initNewPanorama(containerId, currentDate, currentLocation) {
         container.appendChild(dateButtons);
     }
     
+    // 현재 뷰어의 맵만 업데이트하는 함수
+    function updateMapForCurrentViewer(viewerIdx, data, location) {
+        console.log(`뷰어 ${viewerIdx}의 맵만 업데이트합니다.`);
+        
+        const mapContainer = document.getElementById(`mapContainer-view-${viewerIdx}`);
+        if (!mapContainer) {
+            console.log(`맵 컨테이너를 찾을 수 없음: mapContainer-view-${viewerIdx}`);
+            return;
+        }
+        
+        const mapImg = document.getElementById(`mapImage-view-${viewerIdx}`);
+        if (!mapImg) {
+            console.log(`맵 이미지를 찾을 수 없음: mapImage-view-${viewerIdx}`);
+            return;
+        }
+        
+        // 해당 위치의 맵 찾기
+        let matchingMap = null;
+        
+        // 위치에 맵ID가 있는 경우
+        if (location.mapUid && data.maps) {
+            matchingMap = data.maps.find(map => map.uid === location.mapUid);
+        }
+        
+        if (matchingMap && matchingMap.image) {
+            // 맵 이미지 업데이트
+            const fullMapUrl = window.datesJsonUrl + matchingMap.image;
+            console.log(`뷰어 ${viewerIdx}의 맵 이미지 업데이트: ${fullMapUrl}`);
+            mapImg.src = fullMapUrl;
+            
+            // 다중뷰어 맵에서 기존 스팟 제거
+            const mapFigure = mapContainer.querySelector('figure');
+            if (mapFigure) {
+                // 기존 맵 스팟 제거
+                const existingSpots = mapFigure.querySelectorAll('[id^="mapSpot"], [id="mapSpotCurrent"], [id="mapCamera"]');
+                existingSpots.forEach(spot => {
+                    spot.remove();
+                });
+                
+                // 맵 스팟 추가 (location.js의 configureMap 메서드와 유사)
+                if (matchingMap.hasOwnProperty('mapSpots')) {
+                    const spots = matchingMap.mapSpots;
+                    const locationUid = location.uid;
+                    
+                    spots.forEach(function (spot) {
+                        // 스팟 버튼 생성
+                        const spotButton = document.createElement("button");
+                        spotButton.style.position = "absolute";
+                        
+                        // 현재 위치인 경우 특별한 스타일 적용
+                        if (spot.uid === locationUid) {
+                            spotButton.id = "mapSpotCurrent";
+                            
+                            // 카메라 시야각 표시
+                            const viewPort = document.createElement("button");
+                            viewPort.id = "mapCamera";
+                            viewPort.style.left = (spot.mapPosX - 12.5) + "px";
+                            viewPort.style.top = (spot.mapPosY) + "px";
+                            viewPort.dataset.originalX = (spot.mapPosX - 12.5) / 300;
+                            viewPort.dataset.originalY = (spot.mapPosY) / 200;
+                            
+                            mapFigure.appendChild(viewPort);
+                        } else {
+                            spotButton.id = "mapSpot";
+                        }
+                        
+                        // 상대 좌표 저장
+                        spotButton.dataset.originalX = (spot.mapPosX - 15/2) / 300;
+                        spotButton.dataset.originalY = (spot.mapPosY - 15/2) / 200;
+                        
+                        // 위치 설정
+                        spotButton.style.left = (spot.mapPosX - 15/2) + "px";
+                        spotButton.style.top = (spot.mapPosY - 15/2) + "px";
+                        
+                        // 클릭 이벤트 추가
+                        spotButton.addEventListener('mousedown', function (event) {
+                            event.preventDefault();
+                            // 다중뷰어에서 위치 전환 (현재 뷰어만)
+                            changeViewerLocation(viewerIdx, spot.uid);
+                        });
+                        
+                        // 터치 이벤트 추가
+                        spotButton.addEventListener('touchstart', function (event) {
+                            event.preventDefault();
+                            changeViewerLocation(viewerIdx, spot.uid);
+                        });
+                        
+                        // 맵에 스팟 추가
+                        mapFigure.appendChild(spotButton);
+                    });
+                }
+            }
+            
+            // // 스팟 위치 업데이트
+            // const spotContainer = document.getElementById(`spot-container-view-${viewerIdx}`);
+            // if (spotContainer) {
+            //     // 현재 위치의 스팟 위치 찾기
+            //     const currentSpot = matchingMap.mapSpots?.find(spot => spot.uid === location.uid);
+            //     if (currentSpot) {
+            //         const x = currentSpot.mapPosX / 300;  // 300px 기준
+            //         const y = currentSpot.mapPosY / 200;  // 200px 기준
+            //         updateSpotPosition(spotContainer, x, y);
+            //     }
+            // }
+        } else {
+            console.log(`위치 ${location.uid}에 대한 맵을 찾을 수 없습니다.`);
+        }
+    }
+
+    // 특정 뷰어의 위치를 변경하는 함수
+    function changeViewerLocation(viewerIdx, locationUid) {
+        console.log(`뷰어 ${viewerIdx}의 위치를 ${locationUid}로 변경합니다.`);
+        
+        // 현재 날짜 가져오기
+        const panoramaView  = document.getElementById(`panorama-view-${viewerIdx}`);
+        const currentDate = panoramaView.viewerInstance.dateStr;
+        
+        // 위치 변경
+        if (currentDate) {
+            // 파노라마 뷰어 새로 시작
+            startPanoramaInviewer(currentDate, locationUid, viewerIdx);
+        } else {
+            console.log('현재 날짜를 찾을 수 없어 위치를 변경할 수 없습니다.');
+        }
+    }
+
+
+    
     // 이 뷰어만의 변수들
     const viewerState = {
         isUserInteracting: false,
@@ -1078,6 +1106,12 @@ function initNewPanorama(containerId, currentDate, currentLocation) {
     
     // 애니메이션 함수
     function animateViewer() {
+        // 뷰어 인스턴스가 제대로 초기화되지 않았거나 파괴된 경우 애니메이션 중단
+        if (!viewerRenderer || !viewerScene || !viewerCamera) {
+            console.log('animateViewer: 렌더러, 씬 또는 카메라가 없어 애니메이션 중단');
+            return;
+        }
+        
         viewerState.animationId = requestAnimationFrame(animateViewer);
         
         // 자동 회전 제거 (아래 코드 주석 처리)
@@ -1094,11 +1128,25 @@ function initNewPanorama(containerId, currentDate, currentLocation) {
         viewerCamera.target.z = Math.sin(viewerState.phi) * Math.sin(viewerState.theta);
         
         viewerCamera.lookAt(viewerCamera.target);
-        viewerRenderer.render(viewerScene, viewerCamera);
+        
+        // 맵 뷰포트 업데이트
+        updateMapViewport(viewerIndex, viewerState.lon);
+        
+        // null 체크 후 렌더링
+        if (viewerRenderer && viewerScene && viewerCamera) {
+            viewerRenderer.render(viewerScene, viewerCamera);
+        }
     }
 
     function startPanoramaInviewer(renderedDateStr, locationIndex, viewerIndex) {
         console.log(`startPanoramaInviewer 호출: renderedDateStr=${renderedDateStr}, locationIndex=${locationIndex}, viewerIndex=${viewerIndex}`);
+        
+        // 로딩 표시기 표시
+        const loadingIndicator = panoramaView.querySelector('div[innerHTML*="Loading"]');
+        if (loadingIndicator) {
+            loadingIndicator.style.display = 'block';
+            loadingIndicator.innerHTML = '파노라마 전환 중...';
+        }
         
         // 이전 애니메이션 프레임 취소 - 뷰어 인스턴스에서 관리하도록 수정
         if (panoramaView.viewerInstance && panoramaView.viewerInstance.animationId) {
@@ -1106,7 +1154,7 @@ function initNewPanorama(containerId, currentDate, currentLocation) {
             cancelAnimationFrame(panoramaView.viewerInstance.animationId);
             panoramaView.viewerInstance.animationId = null;
         }
-        
+    
         // 이전 씬 정리
         while (viewerScene.children.length > 0) {
             const object = viewerScene.children[0];
@@ -1122,13 +1170,10 @@ function initNewPanorama(containerId, currentDate, currentLocation) {
             }
         }
         
-        // 변수 초기화
-        const selectedDateStr = renderedDateStr;
-
         // 뷰어 인스턴스 초기화 또는 업데이트
         if (!panoramaView.viewerInstance) {
             panoramaView.viewerInstance = {
-                dateStr: selectedDateStr,
+                dateStr: renderedDateStr,
                 locationId: locationIndex,
                 animationId: null,
                 scene: viewerScene,
@@ -1136,7 +1181,7 @@ function initNewPanorama(containerId, currentDate, currentLocation) {
                 renderer: viewerRenderer
             };
         } else {
-            panoramaView.viewerInstance.dateStr = selectedDateStr;
+            panoramaView.viewerInstance.dateStr = renderedDateStr;
             panoramaView.viewerInstance.locationId = locationIndex;
         }
 
@@ -1157,7 +1202,8 @@ function initNewPanorama(containerId, currentDate, currentLocation) {
 
         parseConfigJSON(fullDataURL, function (panodata) {
             var loader = new LocationLoader();
-            loader.loadLocation(panodata.startLocation, function(location) {           
+            // 전달된 locationIndex를 사용하여 해당 위치로 이동
+            loader.loadLocation(locationIndex, function(location) {           
                 viewerScene.add(location);
                 var cts = location.cameraTargets;
                 lat = cts[-1].lat;
@@ -1181,25 +1227,39 @@ function initNewPanorama(containerId, currentDate, currentLocation) {
                 if (infoLabel) {
                     infoLabel.textContent = `위치: ${location.uid}, 날짜: ${renderedDateStr}`;
                 } 
+                
+                // 로딩 표시기 숨기기
+                const loadingIndicator = panoramaView.querySelector('div[innerHTML*="파노라마"]');
+                if (loadingIndicator) {
+                    setTimeout(() => {
+                        loadingIndicator.style.display = 'none';
+                    }, 500);
+                }
+                
+                console.log(`전환 완료: ${location.uid}`);
             });
         });
         
-        // 새 애니메이션 시작 - 뷰어 인스턴스에 저장
-        function animateViewerInstance() {
-            panoramaView.viewerInstance.animationId = requestAnimationFrame(animateViewerInstance);
+        // // 새 애니메이션 시작 - 뷰어 인스턴스에 저장
+        // function animateViewerInstance() {
+        //     panoramaView.viewerInstance.animationId = requestAnimationFrame(animateViewerInstance);
             
-            // 카메라 회전 로직
-            viewerState.lat = Math.max(-85, Math.min(85, viewerState.lat));
-            viewerState.phi = THREE.MathUtils.degToRad(90 - viewerState.lat);
-            viewerState.theta = THREE.MathUtils.degToRad(viewerState.lon);
+        //     // 카메라 회전 로직
+        //     viewerState.lat = Math.max(-85, Math.min(85, viewerState.lat));
+        //     viewerState.phi = THREE.MathUtils.degToRad(90 - viewerState.lat);
+        //     viewerState.theta = THREE.MathUtils.degToRad(viewerState.lon);
             
-            viewerCamera.target.x = Math.sin(viewerState.phi) * Math.cos(viewerState.theta);
-            viewerCamera.target.y = Math.cos(viewerState.phi);
-            viewerCamera.target.z = Math.sin(viewerState.phi) * Math.sin(viewerState.theta);
+        //     viewerCamera.target.x = Math.sin(viewerState.phi) * Math.cos(viewerState.theta);
+        //     viewerCamera.target.y = Math.cos(viewerState.phi);
+        //     viewerCamera.target.z = Math.sin(viewerState.phi) * Math.sin(viewerState.theta);
             
-            viewerCamera.lookAt(viewerCamera.target);
-            viewerRenderer.render(viewerScene, viewerCamera);
-        }
+        //     viewerCamera.lookAt(viewerCamera.target);
+            
+        //     // 맵 뷰포트 업데이트
+        //     updateMapViewport(viewerIndex, viewerState.lon);
+            
+        //     viewerRenderer.render(viewerScene, viewerCamera);
+        // }
         animateViewer();
         // panoramaView.viewerInstance.animationId = requestAnimationFrame(animateViewerInstance);
     }
@@ -1218,7 +1278,7 @@ function initNewPanorama(containerId, currentDate, currentLocation) {
                 // console.log(`${viewerIndex}번 뷰어 로딩: ${fullImgUrl}`);
                 
                 // JSON URL 찾기 - panorama.js와 정확히 동일한 방식 사용
-                renderedDateStr = window.selectedDateStr;
+                let renderedDateStr = window.selectedDateStr;
                 const target_dataURL = window.find_dataURL(renderedDateStr);
                 if (!target_dataURL) {
                     console.error(`날짜 ${renderedDateStr}에 대한 데이터 URL을 찾을 수 없습니다.`);
@@ -1269,13 +1329,132 @@ function initNewPanorama(containerId, currentDate, currentLocation) {
                         function onViewerPointerDown(event) {
                             if (event.isPrimary === false) return;
                             
+                            // 기본 드래그 동작을 위한 상태 업데이트
                             viewerState.isUserInteracting = true;
-                            
                             viewerState.onPointerDownPointerX = event.clientX;
                             viewerState.onPointerDownPointerY = event.clientY;
-                            
                             viewerState.onPointerDownLon = viewerState.lon;
                             viewerState.onPointerDownLat = viewerState.lat;
+                            
+                            // transition 클릭 감지를 위한 raycasting 추가
+                            const rect = panoramaView.getBoundingClientRect();
+                            const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+                            const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+                            
+                            const raycaster = new THREE.Raycaster();
+                            raycaster.setFromCamera(new THREE.Vector2(x, y), viewerCamera);
+                            
+                            // 현재 뷰어에 있는 transition 객체 찾기
+                            const targetList = [];
+                            viewerScene.traverse(function(object) {
+                                // transition 객체 식별 방법 개선
+                                if (object.userData && (
+                                    object.userData.isClickable || 
+                                    object.userData.target !== undefined || 
+                                    object.userData.targetLocation !== undefined)) {
+                                    targetList.push(object);
+                                    // transition 객체를 카메라를 향하도록 설정
+                                    object.lookAt(viewerCamera.position);
+                                }
+                                
+                                // transition 클래스의 인스턴스인지 확인
+                                if (TransitionClass && object instanceof TransitionClass) {
+                                    targetList.push(object);
+                                    object.lookAt(viewerCamera.position);
+                                }
+                                
+                                // 클래스 이름으로 확인 (fallback)
+                                if (object.constructor && (
+                                    (TransitionClass && object.constructor === TransitionClass) || 
+                                    (!TransitionClass && object.constructor.name === 'Transition')
+                                )) {
+                                    targetList.push(object);
+                                    object.lookAt(viewerCamera.position);
+                                }
+                                
+                                // transition 객체가 가진 특정 속성으로도 확인 (더 확실한 방법)
+                                if (object.targetLocation !== undefined) {
+                                    targetList.push(object);
+                                    object.lookAt(viewerCamera.position);
+                                }
+                            });
+                            
+                            // raycasting으로 클릭한 객체 찾기
+                            const intersects = raycaster.intersectObjects(targetList, true);
+                            
+                            if (intersects.length > 0) {
+                                console.log('뷰어에서 전환점 클릭 감지:', intersects[0].object);
+                                const clickedObject = intersects[0].object;
+                                
+                                // 1. onClick 메서드 호출 시도
+                                if (typeof clickedObject.onClick === 'function') {
+                                    try {
+                                        // 실제 onClick 메서드 호출
+                                        // clickedObject.onClick(event);
+                                        console.log('onClick 메서드를 통해 전환 처리 완료');
+                                        
+                                        // 클릭한 객체에서 targetLocation 정보 가져오기
+                                        let targetLocation = null;
+                                        
+                                        if (clickedObject.targetLocation !== undefined) {
+                                            targetLocation = clickedObject.targetLocation;
+                                        } else if (clickedObject.userData && clickedObject.userData.targetLocation !== undefined) {
+                                            targetLocation = clickedObject.userData.targetLocation;
+                                        } else if (clickedObject.userData && clickedObject.userData.target !== undefined) {
+                                            targetLocation = clickedObject.userData.target;
+                                        }
+                                        // 전환 후 뷰어 업데이트를 위해 약간의 지연 후 파노라마 다시 시작
+                                        if (targetLocation !== null) {
+                                            setTimeout(() => {
+                                                // 현재 데이터로 파노라마 다시 로드
+                                                startPanoramaInviewer(panoramaView.viewerInstance.dateStr, targetLocation, viewerIndex);
+                                                console.log(`전환 후 파노라마 업데이트: ${dateStr}, ${targetLocation}, ${viewerIndex}`);
+                                            }, 500);
+                                        }
+                                    } catch (e) {
+                                        console.error('onClick 메서드 호출 중 오류:', e);
+                                        
+                                        // onClick에서 예외가 발생하면 targetLocation 직접 사용 시도
+                                        if (clickedObject.targetLocation !== undefined && typeof window.transitToLocation === 'function') {
+                                            window.transitToLocation(clickedObject.targetLocation);
+                                            console.log('targetLocation 속성을 사용하여 전환');
+                                            
+                                            // 전환 후 뷰어 업데이트
+                                            setTimeout(() => {
+                                                startPanoramaInviewer(dateStr, clickedObject.targetLocation, viewerIndex);
+                                            }, 500);
+                                        }
+                                    }
+                                }
+                                // 2. userData.target으로 transitToLocation 호출 시도
+                                else if (clickedObject.userData) {
+                                    let targetLocation = null;
+                                    
+                                    if (clickedObject.userData.target !== undefined) {
+                                        targetLocation = clickedObject.userData.target;
+                                    }
+                                    else if (clickedObject.userData.targetLocation !== undefined) {
+                                        targetLocation = clickedObject.userData.targetLocation;
+                                    }
+                                    
+                                    if (targetLocation !== null && typeof window.transitToLocation === 'function') {
+                                        console.log(`다중 뷰어에서 위치 ${targetLocation}로 이동 시도`);
+                                        window.transitToLocation(targetLocation);
+                                        
+                                        // 전환 후 뷰어 업데이트를 위해 약간의 지연 후 파노라마 다시 시작
+                                        setTimeout(() => {
+                                            if (typeof startPanoramaInviewer === 'function') {
+                                                // 현재 데이터로 파노라마 다시 로드
+                                                startPanoramaInviewer(dateStr, targetLocation, viewerIndex);
+                                            }
+                                        }, 500);
+                                    }
+                                }
+                                
+                                // 이벤트 처리 완료
+                                event.preventDefault();
+                                event.stopPropagation();
+                            }
                         }
                         
                         function onViewerPointerMove(event) {
@@ -1284,6 +1463,67 @@ function initNewPanorama(containerId, currentDate, currentLocation) {
                             if (viewerState.isUserInteracting) {
                                 viewerState.lon = (viewerState.onPointerDownPointerX - event.clientX) * 0.1 + viewerState.onPointerDownLon;
                                 viewerState.lat = (event.clientY - viewerState.onPointerDownPointerY) * 0.1 + viewerState.onPointerDownLat;
+                            }
+                            
+                            // 마우스 오버 효과를 위한 raycasting 추가
+                            const rect = panoramaView.getBoundingClientRect();
+                            const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+                            const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+                            
+                            const raycaster = new THREE.Raycaster();
+                            raycaster.setFromCamera(new THREE.Vector2(x, y), viewerCamera);
+                            
+                            // transition 객체 찾기
+                            const targetList = [];
+                            
+                            viewerScene.traverse(function(object) {
+                                // transition 객체 식별
+                                if (object.userData && (
+                                    object.userData.isClickable || 
+                                    object.userData.target !== undefined || 
+                                    object.userData.targetLocation !== undefined)) {
+                                    targetList.push(object);
+                                }
+                                
+                                if (TransitionClass && object instanceof TransitionClass) {
+                                    targetList.push(object);
+                                }
+                                
+                                if (object.constructor && (
+                                    (TransitionClass && object.constructor === TransitionClass) || 
+                                    (!TransitionClass && object.constructor.name === 'Transition')
+                                )) {
+                                    targetList.push(object);
+                                }
+                                
+                                if (object.targetLocation !== undefined) {
+                                    targetList.push(object);
+                                }
+                            });
+                            
+                            // raycasting으로 마우스 오버 객체 찾기
+                            const intersects = raycaster.intersectObjects(targetList, true);
+                            
+                            // 현재 호버된 객체
+                            const currentHovered = panoramaView.currentHoveredTransition;
+                            
+                            // 새로운 호버 객체
+                            const newHovered = intersects.length > 0 ? intersects[0].object : null;
+                            
+                            // 이전에 호버된 객체가 있고, 새로운 호버 객체와 다르면 onMouseOut 호출
+                            if (currentHovered && currentHovered !== newHovered) {
+                                if (typeof currentHovered.onMouseOut === 'function') {
+                                    currentHovered.onMouseOut();
+                                }
+                                panoramaView.currentHoveredTransition = null;
+                            }
+                            
+                            // 새로운 호버 객체가 있고, 이전과 다르면 onMouseOver 호출
+                            if (newHovered && newHovered !== currentHovered) {
+                                if (typeof newHovered.onMouseOver === 'function') {
+                                    newHovered.onMouseOver();
+                                }
+                                panoramaView.currentHoveredTransition = newHovered;
                             }
                         }
                         
@@ -1344,7 +1584,7 @@ function initNewPanorama(containerId, currentDate, currentLocation) {
                             renderer: viewerRenderer,
                             state: viewerState,
                             locationId: currentLoc.uid,
-                            dateStr: dateStr,
+                            dateStr: renderedDateStr,
                             destroy: function() {
                                 // 애니메이션 정지
                                 if (viewerState.animationId) {
@@ -1359,7 +1599,31 @@ function initNewPanorama(containerId, currentDate, currentLocation) {
                                 window.removeEventListener('resize', handleViewerResize);
                                 
                                 // 렌더러 및 리소스 정리
-                                viewerRenderer.dispose();
+                                if (viewerRenderer) {
+                                    viewerRenderer.forceContextLoss();  // WebGL 컨텍스트 강제 손실
+                                    viewerRenderer.dispose();           // 모든 렌더러 리소스 해제
+                                    viewerRenderer.domElement = null;   // DOM 참조 해제
+                                    viewerRenderer = null;              // 렌더러 객체 참조 해제
+                                }
+
+                                // 씬의 모든 객체 정리
+                                if (viewerScene) {
+                                    while(viewerScene.children.length > 0) { 
+                                        const child = viewerScene.children[0];
+                                        if (child.geometry) child.geometry.dispose();
+                                        if (child.material) {
+                                            if (Array.isArray(child.material)) {
+                                                child.material.forEach(material => material.dispose());
+                                            } else {
+                                                child.material.dispose();
+                                            }
+                                        }
+                                        viewerScene.remove(child);
+                                    }
+                                    viewerScene = null;
+                                }
+
+
                                 // if (mesh && mesh.geometry) mesh.geometry.dispose();
                                 // if (material) material.dispose();
                                 // if (texture) texture.dispose();
@@ -1384,151 +1648,8 @@ function initNewPanorama(containerId, currentDate, currentLocation) {
                     })
 
 
-                    });
+                });
 
-
-
-
-                // // 텍스처 로더 생성
-                // const textureLoader = new THREE.TextureLoader();
-                // textureLoader.load(
-                //     fullImgUrl,
-                //     function(texture) {
-                //         // 로딩 완료
-                //         // 구면 지오메트리 생성 및 텍스처 적용
-                //         const geometry = new THREE.SphereGeometry(200, 50, 30);
-                //         geometry.applyMatrix4(new THREE.Matrix4().makeScale(-1, 1, 1));
-                        
-                //         const material = new THREE.MeshBasicMaterial({
-                //             map: texture
-                //         });
-                        
-                //         const mesh = new THREE.Mesh(geometry, material);
-                //         viewerScene.add(mesh);
-                        
-                //         // 로딩 표시기 제거
-                //         loadingIndicator.style.display = 'none';
-                        
-                //         // 뷰어 상태 업데이트
-                //         if (currentLoc.cameraTargets && currentLoc.cameraTargets[-1]) {
-                //             viewerState.lat = currentLoc.cameraTargets[-1].lat;
-                //             viewerState.lon = currentLoc.cameraTargets[-1].lon;
-                //         }
-                        
-                //         // 이벤트 리스너 설정
-                //         function onViewerPointerDown(event) {
-                //             if (event.isPrimary === false) return;
-                            
-                //             viewerState.isUserInteracting = true;
-                            
-                //             viewerState.onPointerDownPointerX = event.clientX;
-                //             viewerState.onPointerDownPointerY = event.clientY;
-                            
-                //             viewerState.onPointerDownLon = viewerState.lon;
-                //             viewerState.onPointerDownLat = viewerState.lat;
-                //         }
-                        
-                //         function onViewerPointerMove(event) {
-                //             if (event.isPrimary === false) return;
-                            
-                //             if (viewerState.isUserInteracting) {
-                //                 viewerState.lon = (viewerState.onPointerDownPointerX - event.clientX) * 0.1 + viewerState.onPointerDownLon;
-                //                 viewerState.lat = (event.clientY - viewerState.onPointerDownPointerY) * 0.1 + viewerState.onPointerDownLat;
-                //             }
-                //         }
-                        
-                //         function onViewerPointerUp() {
-                //             viewerState.isUserInteracting = false;
-                //         }
-                        
-                //         function onViewerWheel(event) {
-                //             viewerCamera.fov += event.deltaY * 0.05;
-                //             viewerCamera.fov = Math.max(30, Math.min(90, viewerCamera.fov));
-                //             viewerCamera.updateProjectionMatrix();
-                //         }
-
-                //         // 리사이즈 이벤트 리스너 추가
-                //         function handleViewerResize() {
-                //             viewerCamera.aspect = panoramaView.clientWidth / panoramaView.clientHeight;
-                //             viewerCamera.updateProjectionMatrix();
-                //             viewerRenderer.setSize(panoramaView.clientWidth, panoramaView.clientHeight);
-                //         }
-
-                //         // 이벤트 리스너 등록
-                //         panoramaView.addEventListener('pointerdown', onViewerPointerDown);
-                //         panoramaView.addEventListener('pointermove', onViewerPointerMove);
-                //         panoramaView.addEventListener('pointerup', onViewerPointerUp);
-                //         panoramaView.addEventListener('wheel', onViewerWheel);
-                        
-                //         // 창 크기 변경 이벤트에 대응
-                //         window.addEventListener('resize', handleViewerResize);
-                        
-                //         // 애니메이션 시작
-                //         animateViewer();
-                        
-                //         // 뷰어 정보 표시
-                //         const infoLabel = document.createElement('div');
-                //         infoLabel.className = 'viewer-info-label';
-                //         infoLabel.style.position = 'absolute';
-                //         infoLabel.style.bottom = '50px'; // 날짜 내비게이션과 겹치지 않도록 조정
-                //         infoLabel.style.left = '50%';
-                //         infoLabel.style.transform = 'translateX(-50%)';
-                //         infoLabel.style.padding = '5px 10px';
-                //         infoLabel.style.backgroundColor = 'rgba(0, 0, 0, 0.6)';
-                //         infoLabel.style.color = 'white';
-                //         infoLabel.style.fontSize = '12px';
-                //         infoLabel.style.borderRadius = '4px';
-                //         infoLabel.style.textAlign = 'center'; // 텍스트 중앙 정렬
-                //         infoLabel.style.whiteSpace = 'nowrap'; // 텍스트 줄바꿈 방지
-                //         infoLabel.textContent = `위치: ${currentLoc.uid}, 날짜: ${dateStr}`;
-                //         panoramaView.appendChild(infoLabel);
-
-                //         // 뷰어 객체 저장
-                //         panoramaView.viewerInstance = {
-                //             scene: viewerScene,
-                //             camera: viewerCamera,
-                //             renderer: viewerRenderer,
-                //             state: viewerState,
-                //             locationId: currentLoc.uid,
-                //             dateStr: dateStr,
-                //             destroy: function() {
-                //                 // 애니메이션 정지
-                //                 if (viewerState.animationId) {
-                //                     cancelAnimationFrame(viewerState.animationId);
-                //                 }
-                                
-                //                 // 이벤트 리스너 제거
-                //                 panoramaView.removeEventListener('pointerdown', onViewerPointerDown);
-                //                 panoramaView.removeEventListener('pointermove', onViewerPointerMove);
-                //                 panoramaView.removeEventListener('pointerup', onViewerPointerUp);
-                //                 panoramaView.removeEventListener('wheel', onViewerWheel);
-                //                 window.removeEventListener('resize', handleViewerResize);
-                                
-                //                 // 렌더러 및 리소스 정리
-                //                 viewerRenderer.dispose();
-                //                 if (mesh && mesh.geometry) mesh.geometry.dispose();
-                //                 if (material) material.dispose();
-                //                 if (texture) texture.dispose();
-                                
-                //                 // 요소 제거
-                //                 while (panoramaView.firstChild) {
-                //                     panoramaView.removeChild(panoramaView.firstChild);
-                //                 }
-                //             }
-                //         };
-                //     },
-                //     function(xhr) {
-                //         // 로딩 진행 상황
-                //         const progress = (xhr.loaded / xhr.total * 100).toFixed(0);
-                //         loadingIndicator.innerHTML = `파노라마 로딩 중... ${progress}%`;
-                //     },
-                //     function(error) {
-                //         // 오류 발생
-                //         console.error(`파노라마 로딩 오류: ${error.message}`);
-                //         loadingIndicator.innerHTML = '파노라마 로딩 실패';
-                //         loadingIndicator.style.backgroundColor = 'rgba(255, 0, 0, 0.7)';
-                //     }
-                // );
             } else {
                 console.error(`${viewerIndex}번 뷰어 위치 정보 없음: ${locationIndex}`);
                 loadingIndicator.innerHTML = '위치 정보 없음';
@@ -1641,8 +1762,8 @@ function removeView(index) {
 function restoreMainPanorama() {
     // 첫 번째 뷰어에서 파노라마 꺼내기
     if (activeViews.length > 0) {
-        const firstView = activeViews[0];
-        
+        const mainView = document.getElementById('panorama-view-0');
+        window.selectedDateStr = mainView.viewerInstance.dateStr;
         // 모든 활성 뷰어의 리소스 정리 및 제거
         activeViews.forEach(view => {
             const panoramaView = document.getElementById(`panorama-view-${view.index}`);
@@ -1669,7 +1790,9 @@ function restoreMainPanorama() {
         // 동기화 토글 초기화
         const syncViewsToggle = document.getElementById('sync-views-toggle');
         if (syncViewsToggle) {
-            syncViewsToggle.checked = false;
+            syncViewsToggle.style.background = 'rgba(0, 0, 0, 0.5)';
+            syncViewsToggle.style.boxShadow = 'none';
+            syncViewsToggle.textContent = '동기화';
             isSyncViewsEnabled = false;
         }
     }
@@ -1681,7 +1804,7 @@ function restoreMainPanorama() {
         // window.selectedDateStr = renderedDateStr;
 
         if (typeof window.startPanorama === 'function') {
-            window.startPanorama(dateStr);
+            window.startPanorama(window.selectedDateStr);
         }
        
         // console.log(`메인 파노라마로 복원 시 구도 적용: lat=${window.lat}, lon=${window.lon}`);
@@ -1854,7 +1977,7 @@ function showToast(message, duration = 3000) {
     
     // 토스트 스타일 설정
     toast.style.position = 'fixed';
-    toast.style.bottom = '20px';
+    toast.style.bottom = '50%';
     toast.style.left = '50%';
     toast.style.transform = 'translateX(-50%)';
     toast.style.backgroundColor = 'rgba(50, 50, 50, 0.9)';
@@ -2000,42 +2123,63 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 2000); // 충분한 시간을 두고 초기화
 });
 
-// 현재 뷰어의 맵만 업데이트하는 함수
-function updateMapForCurrentViewer(viewerIdx, data, location) {
-    console.log(`뷰어 ${viewerIdx}의 맵만 업데이트합니다.`);
+
+
+// 이벤트가 발생한 뷰어 인덱스 찾기
+function findActiveViewerIndex(event) {
+    if (!isMultiViewMode || activeViews.length === 0) return -1;
     
-    const mapContainer = document.getElementById(`mapContainer-view-${viewerIdx}`);
-    if (!mapContainer) {
-        console.log(`맵 컨테이너를 찾을 수 없음: mapContainer-view-${viewerIdx}`);
-        return;
-    }
-    
-    const mapImg = document.getElementById(`mapImage-view-${viewerIdx}`);
-    if (!mapImg) {
-        console.log(`맵 이미지를 찾을 수 없음: mapImage-view-${viewerIdx}`);
-        return;
-    }
-    
-    // 해당 위치의 맵 찾기
-    let matchingMap = null;
-    
-    // 위치에 맵ID가 있는 경우
-    if (location.mapUid && data.maps) {
-        matchingMap = data.maps.find(map => map.uid === location.mapUid);
-    }
-    
-    if (matchingMap && matchingMap.image) {
-        // 맵 이미지 업데이트
-        const fullMapUrl = window.datesJsonUrl + matchingMap.image;
-        console.log(`뷰어 ${viewerIdx}의 맵 이미지 업데이트: ${fullMapUrl}`);
-        mapImg.src = fullMapUrl;
-        
-        // 스팟 위치 업데이트
-        const spotContainer = document.getElementById(`spot-container-view-${viewerIdx}`);
-        if (spotContainer && location.mapSpot) {
-            updateSpotPosition(spotContainer, location.mapSpot.x, location.mapSpot.y);
+    // 이벤트 타겟이 있는 경우
+    if (event.target && event.target.closest) {
+        const panoramaView = event.target.closest('[id^="panorama-view-"]');
+        if (panoramaView) {
+            return parseInt(panoramaView.id.split('-').pop());
         }
-    } else {
-        console.log(`위치 ${location.uid}에 대한 맵을 찾을 수 없습니다.`);
     }
-} 
+    
+    // 이벤트 좌표로 판단
+    if (event.clientX && event.clientY) {
+        for (let i = 0; i < activeViews.length; i++) {
+            const viewElement = document.getElementById(`panorama-view-${activeViews[i].index}`);
+            if (viewElement) {
+                const rect = viewElement.getBoundingClientRect();
+                if (
+                    event.clientX >= rect.left && 
+                    event.clientX <= rect.right && 
+                    event.clientY >= rect.top && 
+                    event.clientY <= rect.bottom
+                ) {
+                    return activeViews[i].index;
+                }
+            }
+        }
+    }
+    
+    // 기본값으로 첫 번째 뷰어 반환
+    return activeViews.length > 0 ? activeViews[0].index : -1;
+}
+
+// 맵 뷰포트 업데이트 함수 (카메라 방향에 따라 회전)
+function updateMapViewport(viewerIndex, lon) {
+    // viewerIndex가 정의되지 않았으면 현재 활성화된 뷰어 인덱스 사용
+    const index = viewerIndex !== undefined ? viewerIndex : currentViewerIndex;
+    
+    // 맵 뷰포트 선택 (viewerIndex가 있으면 해당 뷰어, 없으면 전체 뷰어)
+    let mapCameras;
+    if (index !== undefined) {
+        // 특정 뷰어의 맵 카메라만 업데이트
+        const mapCamera = document.querySelector(`#mapContainer-view-${index} #mapCamera`);
+        mapCameras = mapCamera ? [mapCamera] : [];
+    } else {
+        // 모든 뷰어의 맵 카메라 업데이트 (동기화된 경우)
+        mapCameras = Array.from(document.querySelectorAll('[id^="mapContainer-view-"] #mapCamera'));
+    }
+    
+    // 각 맵 카메라 회전 적용
+    mapCameras.forEach(mapCamera => {
+        if (mapCamera) {
+            // lon 값으로 회전 적용 (panorama.js와 동일한 방식)
+            mapCamera.style.transform = `rotate(${lon}deg)`;
+        }
+    });
+}

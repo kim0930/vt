@@ -467,7 +467,8 @@ function startComplete(location) {
     if (window.multiViewExitLat !== undefined && window.multiViewExitLon !== undefined) {
         window.lat = window.multiViewExitLat;
         window.lon = window.multiViewExitLon;
-    } else {var cts = location.cameraTargets;
+    } else {
+        var cts = location.cameraTargets;
         lat = cts[-1].lat;
         lon = cts[-1].lon;
     }
@@ -1063,11 +1064,7 @@ function setMapandNavigationHidden(hidden) {
 	/**
 	 * 항상 숨기게 설정함.
 	 */
-
-
 }
-
-
 
 /**
  * 맵 크기에 맞게 spotButton 위치를 동적으로 업데이트
@@ -1236,13 +1233,31 @@ function moveEventHandler(eventX, eventY, event) {
 
             if (intersects.length > 0) {
                 if (intersects[0].object !== hoverIntersected) {
+                    // 이전에 호버된 객체가 있으면 onMouseOut 호출
                     if (hoverIntersected) {
+                        // 기존 방식
                         hoverIntersected.material.color.setHex(hoverIntersected.currentHex);
+                        
+                        // onMouseOut 메서드 호출 (있는 경우)
+                        if (typeof hoverIntersected.onMouseOut === 'function') {
+                            hoverIntersected.onMouseOut();
+                        }
                     }
+                    
                     hoverIntersected = intersects[0].object;
-
-                    hoverIntersected.currentHex = hoverIntersected.material.color.getHex();
-                    hoverIntersected.material.color.setHex(0x917d4d);
+                    
+                    // 색상 변경 전에 원래 색상 저장
+                    if (!hoverIntersected.currentHex) {
+                        hoverIntersected.currentHex = hoverIntersected.material.color.getHex();
+                    }
+                    
+                    // onMouseOver 메서드 호출 (있는 경우)
+                    if (typeof hoverIntersected.onMouseOver === 'function') {
+                        hoverIntersected.onMouseOver();
+                    } else {
+                        // 기존 방식으로 색상 변경
+                        hoverIntersected.material.color.setHex(0x917d4d);
+                    }
 
                     if (intersects[0].object.tooltip) {
                         toolTip.innerHTML = intersects[0].object.tooltip;
@@ -1251,10 +1266,16 @@ function moveEventHandler(eventX, eventY, event) {
                 }
             } else {
                 if (hoverIntersected) {
+                    // 기존 방식
                     hoverIntersected.material.color.setHex(hoverIntersected.currentHex);
+                    
+                    // onMouseOut 메서드 호출 (있는 경우)
+                    if (typeof hoverIntersected.onMouseOut === 'function') {
+                        hoverIntersected.onMouseOut();
+                    }
+                    
+                    hoverIntersected = null;
                 }
-                hoverIntersected = null;
-                
                 // Transition 객체에 마우스가 없을 때만 깊이 정보 표시
                 if (!isMeasureMode) {
                     showDepthInfo(normalizedX, normalizedY);
@@ -1359,7 +1380,8 @@ function downEventHandler(eventX, eventY, event) {
 
     // if there is one (or more) intersections
     if (intersects.length > 0) {
-        intersects[0].object.onClick();
+        // onClick 메서드 호출 시 event 객체 전달
+        intersects[0].object.onClick(event);
         if (intersects[0].object instanceof Hotspot) {
             isPopupOpen = true;
         }

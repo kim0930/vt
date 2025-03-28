@@ -18,7 +18,7 @@
 .bottom-icons {
     position: absolute; /* app-frame 내에서 위치 설정 */
     bottom: 15px; /* app-frame 하단에서 20px 위로 */
-    left: 100px; /* app-frame 왼쪽에서 20% 위치 */
+    left: 10px; /* app-frame 왼쪽에서 20% 위치 */
     display: flex;
     justify-content: center; /* ✅ 버튼 가운데 정렬 */
     gap: 5px;
